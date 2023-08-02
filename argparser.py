@@ -13,7 +13,7 @@ def args_parser():
     parser.add_argument('--drop_rate', type=float, default=0)
     parser.add_argument('--drop_path_rate', type=float, default=0)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--resize_h', type=int, default=160)
     parser.add_argument('--resize_w', type=int, default=315)
     parser.add_argument('--num_workers', type=int, default=8)
@@ -28,7 +28,7 @@ def args_parser():
     parser.add_argument('--init', default="xavier")
     parser.add_argument('--lr_scheduler', default="Warm-up-Cosine-Annealing")
     parser.add_argument('--backbone', default="resnet50")  # convnextv2_nano.fcmae_ft_in1k  mobilenetv3_large_100.ra_in1k  mobilenetv3_small_100.lamb_in1k
-    parser.add_argument('--model_name',  default="resnet-J-v2")
+    parser.add_argument('--model_name',  default="resnet-J-v1")
     parser.add_argument('--train_csv_path', default="../data/TrainSet/csv/J_train_fold1.csv")
     parser.add_argument('--val_csv_path',  default="../data/TrainSet/csv/J_val_fold1.csv")
     parser.add_argument('--test_path',  default="../data/TestSet")
