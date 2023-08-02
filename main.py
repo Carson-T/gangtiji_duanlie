@@ -20,6 +20,7 @@ from utils.transform import transform
 from utils.function import *
 
 
+
 def set_seed(seed=2023):
     random.seed(seed)
     np.random.seed(seed)
@@ -37,21 +38,15 @@ def main(args, model, groups_params):
     train_transform, val_transform = transform(args)
     test_transform = val_transform
     train_loader = DataLoader(TrainValDataset(args["train_csv_path"], train_transform, args["mode"]),
-                              batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"],
-                              pin_memory=True, drop_last=True)
-    val_loader = DataLoader(TrainValDataset(args["val_csv_path"], val_transform, args["mode"]),
-                            batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"],
-                            pin_memory=True, drop_last=True)
+                              batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"], pin_memory=True, drop_last=True)
+    val_loader = DataLoader(TrainValDataset(args["val_csv_path"], val_transform, args["mode"]),       batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"], pin_memory=True, drop_last=True)
 
-    test_loader = DataLoader(TestDataset(args["test_path"], test_transform, args["mode"]),
-                             batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"],
-                             pin_memory=True, drop_last=False)
-
+    test_loader = DataLoader(TestDataset(args["test_path"], test_transform, args["mode"]), batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"], pin_memory=True, drop_last=False)
+    
     if args["use_external"] == 1:
-        external_loader = DataLoader(
-            MyDataset(args["external_csv_path"], train_transform, args["mode"], is_external=True),
-            batch_size=args["batch_size"],
-            shuffle=True, num_workers=args["num_workers"], pin_memory=True, drop_last=True)
+        external_loader = DataLoader(TrainValDataset(args["external_csv_path"], train_transform, args["mode"], is_external=True),
+                                     batch_size=args["batch_size"],
+                                     shuffle=True, num_workers=args["num_workers"], pin_memory=True, drop_last=True)
 
     if args["is_parallel"] == 1:
         model = nn.DataParallel(model, device_ids=args["device_ids"])
@@ -109,27 +104,26 @@ def main(args, model, groups_params):
         train_preds = torch.argmax(train_outputs, dim=1)
         val_preds = torch.argmax(val_outputs, dim=1)
         test_preds = torch.argmax(test_outputs, dim=1)
-
+        
         train_acc = (train_preds == train_targets).sum().item() / len(train_targets)
         val_acc = (val_preds == val_targets).sum().item() / len(val_targets)
         test_acc = (test_preds == test_targets).sum().item() / len(test_targets)
 
-        train_auc = roc_auc_score(train_targets, train_outputs[:, 1])
-        val_auc = roc_auc_score(val_targets, val_outputs[:, 1])
-        test_auc = roc_auc_score(test_targets, val_outputs[:, 1])
-
+        train_auc = roc_auc_score(train_targets, train_outputs[:,1])
+        val_auc = roc_auc_score(val_targets, val_outputs[:,1])
+        test_auc = roc_auc_score(test_targets, test_outputs[:,1])
+        
+        
         print(f'Epoch {iter}: train acc: {train_acc}')
         print(f'Epoch {iter}: val acc: {val_acc}')
         print(f'Epoch {iter}: test acc: {test_acc}')
         print(f'Epoch {iter}: train auc: {train_auc}')
         print(f'Epoch {iter}: val auc: {val_auc}')
         print(f'Epoch {iter}: test auc: {test_auc}')
-
-        writer.add_scalars("acc", {"train_acc": train_acc, "val_acc": val_acc, "test_acc": test_acc}, iter)
-        writer.add_scalars("auc", {"train_auc": train_auc, "val_auc": val_auc, "test_auc": test_auc}, iter)
-        writer.add_scalars("loss",
-                           {"train_loss": train_loss / len(train_targets), "val_loss": val_loss / len(val_targets),
-                            "test_loss": test_loss / len(test_targets)}, iter)
+        
+        writer.add_scalars("acc", {"train_acc": train_acc, "val_acc": val_acc,"test_acc": test_acc}, iter)
+        writer.add_scalars("auc", {"train_auc": train_auc, "val_auc": val_auc,"test_auc": test_auc}, iter)
+        writer.add_scalars("loss", {"train_loss": train_loss/len(train_targets), "val_loss": val_loss/len(val_targets), "test_loss": test_loss/len(test_targets)}, iter)
 
         if test_auc > best_test_auc:
             best_test_auc = test_auc

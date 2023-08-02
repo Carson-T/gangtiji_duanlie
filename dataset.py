@@ -1,7 +1,7 @@
+import os
 from torch.utils.data import Dataset
 import pandas as pd
 import cv2
-import os
 import numpy as np
 from torch.utils.data import DataLoader
 import albumentations
@@ -14,9 +14,9 @@ class TrainValDataset(Dataset):
         self.is_external = is_external
         self.csv_path = csv_path
         if mode == 'J':
-            self.class_dict = {"1.静息-标准": 1, "2.静息-非标准": 0}  # label dictionary
+            self.class_dict = {"1.静息-标准": 0, "2.静息-非标准": 1}  # label dictionary
         else:
-            self.class_dict = {"3.Valsalva-标准": 1, "4.Valsalva-非标准": 0}  # label dictionary
+            self.class_dict = {"3.Valsalva-标准": 0, "4.Valsalva-非标准": 1}  # label dictionary
         self.transform = transform
         self.img_paths, self.labels = self._make_dataset()  # make dataset
 
@@ -45,10 +45,10 @@ class TestDataset(Dataset):
         super(TestDataset, self).__init__()
         self.testpath = testpath
         if mode == 'J':
-            self.class_dict = {"1.静息-标准": 1, "2.静息-非标准": 0}  # label dictionary
+            self.class_dict = {"1.静息-标准": 0, "2.静息-非标准": 1}  # label dictionary
         else:
-            self.class_dict = {"3.Valsalva-标准": 1, "4.Valsalva-非标准": 0}  # label dictionary
-        self.groups = ["白银", "佛山市一", "广医附三", "湖南省妇幼", "岭南迈瑞"]
+            self.class_dict = {"3.Valsalva-标准": 0, "4.Valsalva-非标准": 1}  # label dictionary
+        self.groups = ["白银","佛山市一","广医附三","湖南省妇幼","岭南迈瑞"]
         self.transform = transform
         self.img_paths, self.labels = self._make_dataset()  # make dataset
 
@@ -82,14 +82,14 @@ class TestDataset(Dataset):
 
 
 if __name__ == '__main__':
-    test_transforms = albumentations.Compose([
-        albumentations.Resize(224, 224),
+    val_transforms = albumentations.Compose([
+        albumentations.Resize(224,224),
         # albumentations.Normalize(),
         AT.ToTensorV2()
     ])
-    loader = DataLoader(TestDataset("../data/TestSet", test_transforms, 'J'), batch_size=8,
+    loader = DataLoader(TrainValDataset("../data/TrainSet/csv/J_train_fold1.csv", val_transforms, 'J'), batch_size=8,
                         shuffle=True, num_workers=1, pin_memory=True, drop_last=True)
-
-    img = cv2.imdecode(np.fromfile('../data/TrainSet/2.静息-非标准/非标准-静息  (1).bmp', dtype=np.uint8), -1)
-    # for i, j in loader:
-    #     print(j)
+    
+    # img = cv2.imdecode(np.fromfile('../data/TrainSet/2.静息-非标准/非标准-静息  (1).bmp', dtype=np.uint8), -1)
+    for i,j in loader:
+        print(j)
