@@ -35,7 +35,7 @@ def args_parser():
     parser.add_argument('--external_csv_path', default="../external_data/external_label.csv")
     parser.add_argument('--saved_path', default='../saved_model/resnet')
     parser.add_argument('--ckpt_path', default='../checkpoints/resnet')
-    parser.add_argument('--log_dir', default="../tf-logs/resnet")
+    parser.add_argument('--log_dir', default="../logs/resnet")
 
     args, _ = parser.parse_known_args()
     return args

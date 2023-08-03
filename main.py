@@ -120,9 +120,9 @@ def main(args, model, groups_params):
         train_fpr, train_tpr, _ = roc_curve(train_targets.numpy(), train_outputs[:, 1].numpy())
         train_auc = auc(train_fpr, train_tpr)
         val_fpr, val_tpr, _ = roc_curve(val_targets.numpy(), val_outputs[:, 1].numpy())
-        val_auc = roc_auc_score(val_fpr, val_tpr)
+        val_auc = auc(val_fpr, val_tpr)
         test_fpr, test_tpr, _ = roc_curve(test_targets.numpy(), test_outputs[:, 1].numpy())
-        test_auc = roc_auc_score(test_fpr, test_tpr)
+        test_auc = auc(test_fpr, test_tpr)
 
         print(f'Epoch {iter}: train acc: {train_acc}')
         print(f'Epoch {iter}: val acc: {val_acc}')
