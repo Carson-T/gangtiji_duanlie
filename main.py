@@ -33,7 +33,7 @@ def set_seed(seed=2023):
 
 def main(args, model, groups_params):
     writer = SummaryWriter(log_dir=args["log_dir"] + "/" + args["model_name"])
-    scaler = GradScaler()
+    # scaler = GradScaler()
     train_transform, val_transform = transform(args)
     test_transform = val_transform
     train_loader = DataLoader(TrainValDataset(args["train_csv_path"], train_transform, args["mode"]),
@@ -99,7 +99,7 @@ def main(args, model, groups_params):
 
     for iter in range(init_epoch, args["epochs"] + 1):
         if args["use_external"] == 1:
-            external_train(external_loader, model, loss_func, optimizer, scaler, args)
+            external_train(external_loader, model, loss_func, optimizer, args)
 
         train_outputs, train_targets, train_loss = train(train_loader, model, loss_func, optimizer, scaler, args)
         val_outputs, val_targets, val_loss = val(val_loader, model, loss_func, args)
@@ -125,21 +125,21 @@ def main(args, model, groups_params):
         print(f'Epoch {iter}: val auc: {val_auc}')
         print(f'Epoch {iter}: test auc: {test_auc}')
 
-        # writer.add_scalars("acc", {"train_acc": train_acc, "val_acc": val_acc, "test_acc": test_acc}, iter)
-        # writer.add_scalars("auc", {"train_auc": train_auc, "val_auc": val_auc, "test_auc": test_auc}, iter)
-        # writer.add_scalars("loss",
-        #                    {"train_loss": train_loss / len(train_targets), "val_loss": val_loss / len(val_targets),
-        #                     "test_loss": test_loss / len(test_targets)}, iter)
-        #
-        # if test_auc > best_test_auc:
-        #     best_test_auc = test_auc
-        #     plot_matrix(test_targets, test_preds, [0, 1],
-        #                 args["log_dir"] + "/" + args["model_name"] + "/confusion_matrix.jpg",
-        #                 ['standards', 'non-standards'])
-        #     torch.save(model.state_dict(), args["saved_path"] + "/" + args["model_name"] + ".pth")
-        #
-        # if iter % 10 == 0:
-        #     save_ckpt(args, model, optimizer, lr_scheduler, iter, best_test_auc)
+        writer.add_scalars("acc", {"train_acc": train_acc, "val_acc": val_acc, "test_acc": test_acc}, iter)
+        writer.add_scalars("auc", {"train_auc": train_auc, "val_auc": val_auc, "test_auc": test_auc}, iter)
+        writer.add_scalars("loss",
+                           {"train_loss": train_loss / len(train_targets), "val_loss": val_loss / len(val_targets),
+                            "test_loss": test_loss / len(test_targets)}, iter)
+
+        if test_auc > best_test_auc:
+            best_test_auc = test_auc
+            plot_matrix(test_targets, test_preds, [0, 1],
+                        args["log_dir"] + "/" + args["model_name"] + "/confusion_matrix.jpg",
+                        ['standards', 'non-standards'])
+            torch.save(model.state_dict(), args["saved_path"] + "/" + args["model_name"] + ".pth")
+
+        if iter % 10 == 0:
+            save_ckpt(args, model, optimizer, lr_scheduler, iter, best_test_auc)
 
 
 if __name__ == '__main__':

@@ -4,9 +4,8 @@ import torch.nn.functional as F
 from tqdm import *
 
 
-
 # training
-def train(train_loader, model, criterion, optimizer, scaler, args):
+def train(train_loader, model, criterion, optimizer, args):
     model.train()
     training_loss = 0.0
     for i, (images, targets) in enumerate(tqdm(train_loader)):
@@ -24,9 +23,9 @@ def train(train_loader, model, criterion, optimizer, scaler, args):
         else:
             all_outputs = torch.cat((all_outputs, output))
             all_targets = torch.cat((all_targets, targets))
-        
+
         all_outputs = F.softmax(all_outputs, dim=1)
-        
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -35,7 +34,6 @@ def train(train_loader, model, criterion, optimizer, scaler, args):
         # scaler.scale(loss).backward()
         # scaler.step(optimizer)
         # scaler.update()
-
 
     return all_outputs.cpu().detach(), all_targets.cpu().detach(), training_loss
 
@@ -60,8 +58,9 @@ def val(val_loader, model, criterion, args):
                 all_outputs = torch.cat((all_outputs, output))
                 all_targets = torch.cat((all_targets, targets))
             all_outputs = F.softmax(all_outputs, dim=1)
-            
+
     return all_outputs.cpu().detach(), all_targets.cpu().detach(), val_loss
+
 
 def test(test_loader, model, criterion, args):
     model.eval()
@@ -83,8 +82,9 @@ def test(test_loader, model, criterion, args):
                 all_outputs = torch.cat((all_outputs, output))
                 all_targets = torch.cat((all_targets, targets))
             all_outputs = F.softmax(all_outputs, dim=1)
-            
+
     return all_outputs.cpu().detach(), all_targets.cpu().detach(), test_loss
+
 
 def external_train(train_loader, model, criterion, optimizer, scaler, args):
     model.train()
