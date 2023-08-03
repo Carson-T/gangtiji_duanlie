@@ -7,6 +7,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 import albumentations
 from albumentations import pytorch as AT
+from torchvision import transforms
 
 
 class TrainValDataset(Dataset):
@@ -83,14 +84,13 @@ class TestDataset(Dataset):
 
 
 if __name__ == '__main__':
-    val_transforms = albumentations.Compose([
-        albumentations.Resize(224, 224),
-        # albumentations.Normalize(),
-        AT.ToTensorV2()
+    val_transforms = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(0.21162076, 0.22596906)
     ])
     loader = DataLoader(TrainValDataset("../data/TrainSet/csv/J_train_fold1.csv", val_transforms, 'J'), batch_size=8,
                         shuffle=True, num_workers=1, pin_memory=True, drop_last=True)
 
     # img = cv2.imdecode(np.fromfile('../data/TrainSet/2.静息-非标准/非标准-静息  (1).bmp', dtype=np.uint8), -1)
-    for i, j in loader:
-        print(j)
+    print(len(loader.dataset))

@@ -47,7 +47,7 @@ def at_transform(args):
         albumentations.HueSaturationValue(hue_shift_limit=10, sat_shift_limit=20, val_shift_limit=10, p=0.5),
         albumentations.ShiftScaleRotate(shift_limit=0.2, scale_limit=0.2, rotate_limit=10, border_mode=0, p=0.5),
         albumentations.CoarseDropout(max_holes=1, max_height=int(args["resize_h"] * 0.3), max_width=int(args["resize_w"] * 0.3), min_height=1, min_width=1, p=0.5),
-        albumentations.Normalize(0.21162076, 0.22596906),
+        albumentations.Normalize(0.21162076, 0.22596906),   # J 0.21162076, 0.22596906  V 0.20643906, 0.23376599
         AT.ToTensorV2()
         ])
 
@@ -72,20 +72,20 @@ def tv_transform(args):
         transforms.ColorJitter(brightness=0.15, contrast=0.15, saturation=0.15, hue=0),
         transforms.RandomRotation(5),
         AddPepperNoise(0.95, p=0.5),
-        transforms.Normalize(0.21162076, 0.22596906),
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        transforms.Normalize(0.21162076, 0.22596906)
     ])
 
     val_transforms = transforms.Compose([
         transforms.Resize((args["resize_h"], args["resize_w"])),
-        transforms.Normalize(0.21162076, 0.22596906),
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        transforms.Normalize(0.21162076, 0.22596906)
     ])
 
     test_transforms = transforms.Compose([
         transforms.Resize((args["resize_h"], args["resize_w"])),
-        transforms.Normalize(0.21162076, 0.22596906),
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        transforms.Normalize(0.21162076, 0.22596906)
     ])
 
     return train_transforms, val_transforms, test_transforms

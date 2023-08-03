@@ -44,6 +44,9 @@ def main(args, model, groups_params):
                              batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
                              pin_memory=True, drop_last=False)
 
+    print("num of train images:", len(train_loader.dataset))
+    print("num of val images:", len(val_loader.dataset))
+    print("num of test images:", len(test_loader.dataset))
 
     if args["is_parallel"] == 1:
         model = nn.DataParallel(model, device_ids=args["device_ids"])
