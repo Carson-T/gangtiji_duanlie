@@ -1,3 +1,4 @@
+import torch.optim.lr_scheduler
 from torch.utils.data import DataLoader
 from torch.cuda.amp import GradScaler
 import torch.backends.cudnn as cudnn
@@ -8,7 +9,7 @@ import collections
 import random
 import numpy as np
 import timm
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, roc_curve, auc
 from torch.utils.tensorboard import SummaryWriter
 from train import *
 from dataset import *
@@ -81,10 +82,8 @@ def main(args, model, groups_params):
             (1 - init_ratio) / (warm_up_steps - 1) * step + init_ratio if step < warm_up_steps - 1 \
                 else (1 - min_lr_ratio) * 0.5 * (np.cos(
                 (step - (warm_up_steps - 1)) / (max_steps - (warm_up_steps - 1)) * np.pi) + 1) + min_lr_ratio)
-    elif args["lr_scheduler"] == "ReduceLROnPlateau":
-        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
-                                                                  factor=0.5, patience=10, verbose=True,
-                                                                  min_lr=args["min_lr_ratio"] * args["lr"])
+    elif args["lr_scheduler"] == "StepLR":
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
     best_test_auc = 0
     init_epoch = 1
@@ -101,7 +100,7 @@ def main(args, model, groups_params):
         if args["use_external"] == 1:
             external_train(external_loader, model, loss_func, optimizer, args)
 
-        train_outputs, train_targets, train_loss = train(train_loader, model, loss_func, optimizer, scaler, args)
+        train_outputs, train_targets, train_loss = train(train_loader, model, loss_func, optimizer, args)
         val_outputs, val_targets, val_loss = val(val_loader, model, loss_func, args)
         test_outputs, test_targets, test_loss = test(test_loader, model, loss_func, args)
         lr_scheduler.step()
@@ -114,9 +113,16 @@ def main(args, model, groups_params):
         val_acc = (val_preds == val_targets).sum().item() / len(val_targets)
         test_acc = (test_preds == test_targets).sum().item() / len(test_targets)
 
-        train_auc = roc_auc_score(train_targets, train_outputs[:, 1])
-        val_auc = roc_auc_score(val_targets, val_outputs[:, 1])
-        test_auc = roc_auc_score(test_targets, test_outputs[:, 1])
+        # train_auc = roc_auc_score(train_targets, train_outputs[:, 1])
+        # val_auc = roc_auc_score(val_targets, val_outputs[:, 1])
+        # test_auc = roc_auc_score(test_targets, test_outputs[:, 1])
+
+        train_fpr, train_tpr, _ = roc_curve(train_targets.numpy(), train_outputs[:, 1].numpy())
+        train_auc = auc(train_fpr, train_tpr)
+        val_fpr, val_tpr, _ = roc_curve(val_targets.numpy(), val_outputs[:, 1].numpy())
+        val_auc = roc_auc_score(val_fpr, val_tpr)
+        test_fpr, test_tpr, _ = roc_curve(test_targets.numpy(), test_outputs[:, 1].numpy())
+        test_auc = roc_auc_score(test_fpr, test_tpr)
 
         print(f'Epoch {iter}: train acc: {train_acc}')
         print(f'Epoch {iter}: val acc: {val_acc}')

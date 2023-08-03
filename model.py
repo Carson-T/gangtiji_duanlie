@@ -16,6 +16,7 @@ class resnet(nn.Module):
             # nn.ReLU(),
             # nn.Linear(256, num_classes)
         )
+        # self.pretrained_model.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3))
         self.pretrained_model.fc = self.classifier
 
     def forward(self, x):
@@ -84,6 +85,7 @@ class InceptionNext(nn.Module):
     def forward(self, x):
         output = self.pretrained_model(x)
         return output
+
 
 class MoGhoNet(nn.Module):
     def __init__(self, pretrained_model, num_classes):
