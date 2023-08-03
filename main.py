@@ -35,8 +35,7 @@ def set_seed(seed=2023):
 def main(args, model, groups_params):
     writer = SummaryWriter(log_dir=args["log_dir"] + "/" + args["model_name"])
     # scaler = GradScaler()
-    train_transform, val_transform = transform(args)
-    test_transform = val_transform
+    train_transform, val_transform, test_transform = transform(args)
     train_loader = DataLoader(TrainValDataset(args["train_csv_path"], train_transform, args["mode"]),
                               batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"],
                               pin_memory=True, drop_last=True)
@@ -45,7 +44,7 @@ def main(args, model, groups_params):
                             pin_memory=True, drop_last=True)
 
     test_loader = DataLoader(TestDataset(args["test_path"], test_transform, args["mode"]),
-                             batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"],
+                             batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
                              pin_memory=True, drop_last=False)
 
     if args["use_external"] == 1:
@@ -68,12 +67,12 @@ def main(args, model, groups_params):
         optimizer = torch.optim.SGD(groups_params, momentum=0.9, weight_decay=args["weight_decay"])
 
     if args["loss_func"] == "CEloss":
-        # weight = torch.tensor([0.033, 0.041, 0.026, 0.02, 0.008, 0.872])
         loss_func = torch.nn.CrossEntropyLoss().to(args["device"])
     # elif args["loss_func"] == "FocalLoss":
     #     loss_func = FocalLoss().to(args["device"])
-    # elif args["loss_func"] == "LabelSmoothLoss":
-    #     loss_func = LabelSmoothLoss().to(args["device"])
+    elif args["loss_func"] == "LabelSmoothLoss":
+        weight = torch.Tensor([1.0, 1.0]).to(args["device"])
+        loss_func = LabelSmoothLoss(weight).to(args["device"])
 
     if args["lr_scheduler"] == "Warm-up-Cosine-Annealing":
         init_ratio, warm_up_steps, min_lr_ratio, max_steps = args["init_ratio"], args["epochs"] / 10, args[
@@ -113,16 +112,16 @@ def main(args, model, groups_params):
         val_acc = (val_preds == val_targets).sum().item() / len(val_targets)
         test_acc = (test_preds == test_targets).sum().item() / len(test_targets)
 
-        # train_auc = roc_auc_score(train_targets, train_outputs[:, 1])
-        # val_auc = roc_auc_score(val_targets, val_outputs[:, 1])
-        # test_auc = roc_auc_score(test_targets, test_outputs[:, 1])
+        train_auc = roc_auc_score(train_targets, train_outputs[:, 1])
+        val_auc = roc_auc_score(val_targets, val_outputs[:, 1])
+        test_auc = roc_auc_score(test_targets, test_outputs[:, 1])
 
-        train_fpr, train_tpr, _ = roc_curve(train_targets.numpy(), train_outputs[:, 1].numpy())
-        train_auc = auc(train_fpr, train_tpr)
-        val_fpr, val_tpr, _ = roc_curve(val_targets.numpy(), val_outputs[:, 1].numpy())
-        val_auc = auc(val_fpr, val_tpr)
-        test_fpr, test_tpr, _ = roc_curve(test_targets.numpy(), test_outputs[:, 1].numpy())
-        test_auc = auc(test_fpr, test_tpr)
+        # train_fpr, train_tpr, _ = roc_curve(train_targets.numpy(), train_outputs[:, 1].numpy())
+        # train_auc = auc(train_fpr, train_tpr)
+        # val_fpr, val_tpr, _ = roc_curve(val_targets.numpy(), val_outputs[:, 1].numpy())
+        # val_auc = auc(val_fpr, val_tpr)
+        # test_fpr, test_tpr, _ = roc_curve(test_targets.numpy(), test_outputs[:, 1].numpy())
+        # test_auc = auc(test_fpr, test_tpr)
 
         print(f'Epoch {iter}: train acc: {train_acc}')
         print(f'Epoch {iter}: val acc: {val_acc}')

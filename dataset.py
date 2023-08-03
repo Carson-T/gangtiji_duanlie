@@ -2,6 +2,7 @@ import os
 from torch.utils.data import Dataset
 import pandas as pd
 import cv2
+from PIL import Image
 import numpy as np
 from torch.utils.data import DataLoader
 import albumentations
@@ -26,6 +27,7 @@ class TrainValDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.img_paths[idx]
         label = self.labels[idx]
+        img = np.array(Image.open(img_path))
         img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), -1)
         # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         if self.transform:
@@ -58,6 +60,7 @@ class TestDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.img_paths[idx]
         label = self.labels[idx]
+        img = np.array(Image.open(img_path))
         img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), -1)
         # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         if self.transform:
@@ -73,10 +76,9 @@ class TestDataset(Dataset):
                 class_path = os.path.join(group_path, class_name)
                 label = self.class_dict[class_name]
                 for file_name in os.listdir(class_path):
-                    if file_name.endswith('.bmp'):
-                        img_path = os.path.join(class_path, file_name)
-                        img_paths.append(img_path)
-                        labels.append(label)
+                    img_path = os.path.join(class_path, file_name)
+                    img_paths.append(img_path)
+                    labels.append(label)
 
         return img_paths, labels
 
