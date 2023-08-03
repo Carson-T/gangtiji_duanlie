@@ -14,7 +14,7 @@ from argparser import args_parser
 from model import *
 from utils.loss import *
 from utils.plot import plot_matrix
-from utils.transform import at_transform, tv_transform
+from utils.transform import *
 from utils.function import *
 
 
@@ -141,7 +141,7 @@ if __name__ == '__main__':
                                              drop_path_rate=args["drop_path_rate"], pretrained=True)
     else:
         pretrained_model = timm.create_model(args["backbone"], drop_rate=args["drop_rate"], pretrained=True)
-    pretrained_model = models.resnet50(pretrained=True)
+
     if "resnet" in args["backbone"]:
         model = resnet(pretrained_model, args["num_classes"])
         base_params = filter(lambda p: id(p) not in list(map(id, model.pretrained_model.fc.parameters())),

@@ -1,5 +1,5 @@
 import torch
-from torch.cuda.amp import autocast
+# from torch.cuda.amp import autocast
 import torch.nn.functional as F
 from tqdm import *
 
@@ -86,20 +86,3 @@ def test(test_loader, model, criterion, args):
     return all_outputs.cpu().detach(), all_targets.cpu().detach(), test_loss
 
 
-def external_train(train_loader, model, criterion, optimizer, args):
-    model.train()
-    training_loss = 0.0
-    for i, (images, targets, groups) in enumerate(tqdm(train_loader)):
-        images = images.to(args["device"])
-        targets = targets.to(args["device"])
-        with autocast():
-            output = model(images)
-            loss = criterion(output, targets)
-            # _, preds = torch.max(output, dim=1)
-            preds = output[:, 0]
-        training_loss += loss.item()
-
-        # optimizer.zero_grad()
-        # scaler.scale(loss).backward()
-        # scaler.step(optimizer)
-        # scaler.update()
