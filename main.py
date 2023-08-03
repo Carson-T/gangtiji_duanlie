@@ -2,12 +2,8 @@ import torch.optim.lr_scheduler
 from torch.utils.data import DataLoader
 from torch.cuda.amp import GradScaler
 import torch.backends.cudnn as cudnn
-from torchvision import models
-import os
 import json
-import collections
 import random
-import numpy as np
 import timm
 from sklearn.metrics import roc_auc_score, roc_curve, auc
 from torch.utils.tensorboard import SummaryWriter
@@ -17,7 +13,7 @@ from argparser import args_parser
 from model import *
 from utils.loss import *
 from utils.plot import plot_matrix
-from utils.transform import transform
+from utils.transform import at_transform, tv_transform
 from utils.function import *
 
 
@@ -35,7 +31,8 @@ def set_seed(seed=2023):
 def main(args, model, groups_params):
     writer = SummaryWriter(log_dir=args["log_dir"] + "/" + args["model_name"])
     # scaler = GradScaler()
-    train_transform, val_transform, test_transform = transform(args)
+    train_transform, val_transform, test_transform = tv_transform(args)
+    # train_transform, val_transform, test_transform = at_transform(args)
     train_loader = DataLoader(TrainValDataset(args["train_csv_path"], train_transform, args["mode"]),
                               batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"],
                               pin_memory=True, drop_last=True)
@@ -47,11 +44,6 @@ def main(args, model, groups_params):
                              batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
                              pin_memory=True, drop_last=False)
 
-    if args["use_external"] == 1:
-        external_loader = DataLoader(
-            TrainValDataset(args["external_csv_path"], train_transform, args["mode"], is_external=True),
-            batch_size=args["batch_size"],
-            shuffle=True, num_workers=args["num_workers"], pin_memory=True, drop_last=True)
 
     if args["is_parallel"] == 1:
         model = nn.DataParallel(model, device_ids=args["device_ids"])
@@ -96,9 +88,6 @@ def main(args, model, groups_params):
         performance_score_best = checkpoint["best_performance"]
 
     for iter in range(init_epoch, args["epochs"] + 1):
-        if args["use_external"] == 1:
-            external_train(external_loader, model, loss_func, optimizer, args)
-
         train_outputs, train_targets, train_loss = train(train_loader, model, loss_func, optimizer, args)
         val_outputs, val_targets, val_loss = val(val_loader, model, loss_func, args)
         test_outputs, test_targets, test_loss = test(test_loader, model, loss_func, args)
@@ -116,13 +105,6 @@ def main(args, model, groups_params):
         val_auc = roc_auc_score(val_targets, val_outputs[:, 1])
         test_auc = roc_auc_score(test_targets, test_outputs[:, 1])
 
-        # train_fpr, train_tpr, _ = roc_curve(train_targets.numpy(), train_outputs[:, 1].numpy())
-        # train_auc = auc(train_fpr, train_tpr)
-        # val_fpr, val_tpr, _ = roc_curve(val_targets.numpy(), val_outputs[:, 1].numpy())
-        # val_auc = auc(val_fpr, val_tpr)
-        # test_fpr, test_tpr, _ = roc_curve(test_targets.numpy(), test_outputs[:, 1].numpy())
-        # test_auc = auc(test_fpr, test_tpr)
-
         print(f'Epoch {iter}: train acc: {train_acc}')
         print(f'Epoch {iter}: val acc: {val_acc}')
         print(f'Epoch {iter}: test acc: {test_acc}')
@@ -130,21 +112,21 @@ def main(args, model, groups_params):
         print(f'Epoch {iter}: val auc: {val_auc}')
         print(f'Epoch {iter}: test auc: {test_auc}')
 
-        writer.add_scalars("acc", {"train_acc": train_acc, "val_acc": val_acc, "test_acc": test_acc}, iter)
-        writer.add_scalars("auc", {"train_auc": train_auc, "val_auc": val_auc, "test_auc": test_auc}, iter)
-        writer.add_scalars("loss",
-                           {"train_loss": train_loss / len(train_targets), "val_loss": val_loss / len(val_targets),
-                            "test_loss": test_loss / len(test_targets)}, iter)
-
-        if test_auc > best_test_auc:
-            best_test_auc = test_auc
-            plot_matrix(test_targets, test_preds, [0, 1],
-                        args["log_dir"] + "/" + args["model_name"] + "/confusion_matrix.jpg",
-                        ['standards', 'non-standards'])
-            torch.save(model.state_dict(), args["saved_path"] + "/" + args["model_name"] + ".pth")
-
-        if iter % 10 == 0:
-            save_ckpt(args, model, optimizer, lr_scheduler, iter, best_test_auc)
+        # writer.add_scalars("acc", {"train_acc": train_acc, "val_acc": val_acc, "test_acc": test_acc}, iter)
+        # writer.add_scalars("auc", {"train_auc": train_auc, "val_auc": val_auc, "test_auc": test_auc}, iter)
+        # writer.add_scalars("loss",
+        #                    {"train_loss": train_loss / len(train_targets), "val_loss": val_loss / len(val_targets),
+        #                     "test_loss": test_loss / len(test_targets)}, iter)
+        #
+        # if test_auc > best_test_auc:
+        #     best_test_auc = test_auc
+        #     plot_matrix(test_targets, test_preds, [0, 1],
+        #                 args["log_dir"] + "/" + args["model_name"] + "/confusion_matrix.jpg",
+        #                 ['standards', 'non-standards'])
+        #     torch.save(model.state_dict(), args["saved_path"] + "/" + args["model_name"] + ".pth")
+        #
+        # if iter % 10 == 0:
+        #     save_ckpt(args, model, optimizer, lr_scheduler, iter, best_test_auc)
 
 
 if __name__ == '__main__':

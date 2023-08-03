@@ -1,7 +1,33 @@
 import albumentations
 from albumentations import pytorch as AT
+from PIL import Image
+from torchvision import transforms
+import random
+import numpy as np
 
-def transform(args):
+class AddPepperNoise(object):
+
+    def __init__(self, snr, p=0.9):
+        assert isinstance(snr, float) and (isinstance(p, float))
+        self.snr = snr
+        self.p = p
+
+    def __call__(self, img):
+
+        if random.uniform(0, 1) < self.p:
+            img_ = np.array(img).copy()
+            h, w, c = img_.shape
+            signal_pct = self.snr
+            noise_pct = (1 - self.snr)
+            mask = np.random.choice((0, 1, 2), size=(h, w, 1), p=[signal_pct, noise_pct/2., noise_pct/2.])
+            mask = np.repeat(mask, c, axis=2)
+            img_[mask == 1] = 255   # 盐噪声
+            img_[mask == 2] = 0     # 椒噪声
+            return Image.fromarray(img_.astype('uint8')).convert('RGB')
+        else:
+            return img
+
+def at_transform(args):
     train_transforms = albumentations.Compose([
         albumentations.Resize(args["resize_h"], args["resize_w"]),
         albumentations.Sharpen(p=0.5),
@@ -38,3 +64,29 @@ def transform(args):
     ])
 
     return train_transforms, val_transforms, test_transforms
+
+def tv_transform(args):
+    train_transforms = transforms.Compose([
+        transforms.Resize((args["resize_h"], args["resize_w"])),
+        transforms.RandomAdjustSharpness(sharpness_factor=2, p=0.5),
+        transforms.ColorJitter(brightness=0.15, contrast=0.15, saturation=0.15, hue=0),
+        transforms.RandomRotation(5),
+        AddPepperNoise(0.95, p=0.5),
+        transforms.Normalize(0.21162076, 0.22596906),
+        transforms.ToTensor()
+    ])
+
+    val_transforms = transforms.Compose([
+        transforms.Resize((args["resize_h"], args["resize_w"])),
+        transforms.Normalize(0.21162076, 0.22596906),
+        transforms.ToTensor()
+    ])
+
+    test_transforms = transforms.Compose([
+        transforms.Resize((args["resize_h"], args["resize_w"])),
+        transforms.Normalize(0.21162076, 0.22596906),
+        transforms.ToTensor()
+    ])
+
+    return train_transforms, val_transforms, test_transforms
+
