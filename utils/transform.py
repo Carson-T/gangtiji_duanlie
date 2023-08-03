@@ -21,12 +21,13 @@ class AddPepperNoise(object):
             noise_pct = (1 - self.snr)
             mask = np.random.choice((0, 1, 2), size=(h, w, 1), p=[signal_pct, noise_pct/2., noise_pct/2.])
             mask = np.repeat(mask, c, axis=2)
-            img_[mask == 1] = 255   # 盐噪声
-            img_[mask == 2] = 0     # 椒噪声
+            img_[mask == 1] = 255  
+            img_[mask == 2] = 0    
             return Image.fromarray(img_.astype('uint8')).convert('RGB')
         else:
             return img
 
+# albumentations transforms
 def at_transform(args):
     train_transforms = albumentations.Compose([
         albumentations.Resize(args["resize_h"], args["resize_w"]),
@@ -65,6 +66,7 @@ def at_transform(args):
 
     return train_transforms, val_transforms, test_transforms
 
+# torchvision transforms
 def tv_transform(args):
     train_transforms = transforms.Compose([
         transforms.Resize((args["resize_h"], args["resize_w"])),
