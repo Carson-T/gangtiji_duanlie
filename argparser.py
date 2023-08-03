@@ -28,8 +28,8 @@ def args_parser():
     parser.add_argument('--lr_scheduler', default="StepLR")  #Warm-up-Cosine-Annealing
     parser.add_argument('--backbone', default="resnet50.tv_in1k")  # pretrained_model  convnextv2_nano.fcmae_ft_in1k  resnet50.tv_in1k
     parser.add_argument('--model_name',  default="resnet50-J-fold1-v1")  # model version
-    parser.add_argument('--train_csv_path', default="../data/TrainSet/csv/J_train_fold1.csv")  # train csv path
-    parser.add_argument('--val_csv_path',  default="../data/TrainSet/csv/J_val_fold1.csv")   # test csv path
+    parser.add_argument('--train_csv_path', default="csv/J_train_fold1.csv")  # train csv path
+    parser.add_argument('--val_csv_path',  default="csv/J_val_fold1.csv")   # test csv path
     parser.add_argument('--test_path',  default="../data/TestSet")  # test data path
     parser.add_argument('--saved_path', default='../saved_model/J/resnet')   # model saved path
     parser.add_argument('--ckpt_path', default='../checkpoints/J/resnet')  # checkpoints path for resume

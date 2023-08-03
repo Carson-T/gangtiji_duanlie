@@ -31,7 +31,7 @@ for k, (train_idx, val_idx) in enumerate(kf.split(img_paths, labels)):
 
     train_df.insert(loc=len(train_df.columns), column="path", value=train_path)
     train_df.insert(loc=len(train_df.columns), column="label", value=train_labels)
-    train_df.to_csv(path+f"/csv/J_train_fold{k + 1}.csv", index=False)
+    train_df.to_csv(f"csv/J_train_fold{k + 1}.csv", index=False)
     val_df.insert(loc=len(val_df.columns), column="path", value=val_path)
     val_df.insert(loc=len(val_df.columns), column="label", value=val_labels)
-    val_df.to_csv(path+f"/csv/J_val_fold{k + 1}.csv", index=False)
+    val_df.to_csv(f"csv/J_val_fold{k + 1}.csv", index=False)
