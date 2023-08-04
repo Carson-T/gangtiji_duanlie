@@ -24,7 +24,7 @@ def train(train_loader, model, criterion, optimizer, args):
             all_outputs = torch.cat((all_outputs, output))
             all_targets = torch.cat((all_targets, targets))
 
-        all_outputs = F.softmax(all_outputs, dim=1)
+        
 
         optimizer.zero_grad()
         loss.backward()
@@ -34,6 +34,7 @@ def train(train_loader, model, criterion, optimizer, args):
         # scaler.scale(loss).backward()
         # scaler.step(optimizer)
         # scaler.update()
+    all_outputs = F.softmax(all_outputs, dim=1)
 
     return all_outputs.cpu().detach(), all_targets.cpu().detach(), training_loss
 
@@ -57,7 +58,7 @@ def val(val_loader, model, criterion, args):
             else:
                 all_outputs = torch.cat((all_outputs, output))
                 all_targets = torch.cat((all_targets, targets))
-            all_outputs = F.softmax(all_outputs, dim=1)
+    all_outputs = F.softmax(all_outputs, dim=1)
 
     return all_outputs.cpu().detach(), all_targets.cpu().detach(), val_loss
 
@@ -81,7 +82,7 @@ def test(test_loader, model, criterion, args):
             else:
                 all_outputs = torch.cat((all_outputs, output))
                 all_targets = torch.cat((all_targets, targets))
-            all_outputs = F.softmax(all_outputs, dim=1)
+    all_outputs = F.softmax(all_outputs, dim=1)
 
     return all_outputs.cpu().detach(), all_targets.cpu().detach(), test_loss
 

@@ -1,4 +1,6 @@
 import os
+import cv2
+import numpy as np
 from torch.utils.data import Dataset
 import pandas as pd
 from PIL import Image
@@ -21,11 +23,12 @@ class TrainValDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.img_paths[idx]
         label = self.labels[idx]
-        img = Image.open(img_path)
-        # img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), -1)
+        # img = Image.open(img_path)
+        img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), -1)
         # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = self.transform(img)
-        # img = self.transform(image=img)["image"]
+        if self.transform:
+            # img = self.transform(img)
+            img = self.transform(image=img)["image"]
         return img, label
 
     def _make_dataset(self):
@@ -54,11 +57,11 @@ class TestDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.img_paths[idx]
         label = self.labels[idx]
-        img = Image.open(img_path)
-        # img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), -1)
+        # img = Image.open(img_path)
+        img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), -1)
         if self.transform:
-            img = self.transform(img)
-            # img = self.transform(image=img)["image"]
+            # img = self.transform(img)
+            img = self.transform(image=img)["image"]
         return img, label
 
     def _make_dataset(self):
