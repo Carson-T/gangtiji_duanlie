@@ -23,9 +23,6 @@ def train(train_loader, model, criterion, optimizer, args):
         else:
             all_outputs = torch.cat((all_outputs, output))
             all_targets = torch.cat((all_targets, targets))
-
-        
-
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()

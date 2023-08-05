@@ -32,8 +32,8 @@ def set_seed(seed=2023):
 def main(args, model, groups_params):
     writer = SummaryWriter(log_dir=args["log_dir"] + "/" + args["model_name"])
     # scaler = GradScaler()
-    train_transform, val_transform, test_transform = tv_transform(args)
-    # train_transform, val_transform, test_transform = at_transform(args)
+    # train_transform, val_transform, test_transform = tv_transform(args)
+    train_transform, val_transform, test_transform = at_transform(args)
     train_loader = DataLoader(TrainValDataset(args["train_csv_path"], train_transform, args["mode"]),
                               batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"],
                               pin_memory=True, drop_last=True)
@@ -81,6 +81,7 @@ def main(args, model, groups_params):
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args["step_size"], gamma=args["gamma"])
 
     best_test_auc = 0
+    best_epoch_metrics = []
     init_epoch = 1
 
     if args["resume"] != "":
@@ -89,7 +90,7 @@ def main(args, model, groups_params):
         optimizer.load_state_dict(checkpoint["optimizer"])
         lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
         init_epoch = checkpoint["epoch"] + 1
-        performance_score_best = checkpoint["best_performance"]
+        best_test_auc = checkpoint["best_test_auc"]
 
     for iter in range(init_epoch, args["epochs"] + 1):
         train_outputs, train_targets, train_loss = train(train_loader, model, loss_func, optimizer, args)
@@ -121,17 +122,19 @@ def main(args, model, groups_params):
         writer.add_scalars("loss",
                            {"train_loss": train_loss / len(train_targets), "val_loss": val_loss / len(val_targets),
                             "test_loss": test_loss / len(test_targets)}, iter)
-        
+
         if test_auc > best_test_auc:
+            best_epoch_metrics = [round(i,4) for i in [train_acc, val_acc, test_acc, train_auc, val_auc, test_auc]]
             best_test_auc = test_auc
             plot_matrix(test_targets, test_preds, [0, 1],
                         args["log_dir"] + "/" + args["model_name"] + "/confusion_matrix.jpg",
                         ['standards', 'non-standards'])
             torch.save(model.state_dict(), args["saved_path"] + "/" + args["model_name"] + ".pth")
-        
+
         if iter % 10 == 0:
             save_ckpt(args, model, optimizer, lr_scheduler, iter, best_test_auc)
 
+    log_metrics(best_epoch_metrics, args)
 
 if __name__ == '__main__':
     args = vars(args_parser())
