@@ -16,7 +16,7 @@ def train(train_loader, model, criterion, optimizer, args):
         loss = criterion(output, targets)
         # _, preds = torch.max(output, dim=1)
         # preds = output[:, 0]
-        training_loss += loss.item()
+        training_loss += loss.item()*len(targets)
         if i == 0:
             all_outputs = output
             all_targets = targets
@@ -48,7 +48,7 @@ def val(val_loader, model, criterion, args):
             loss = criterion(output, targets)
             # _, preds = torch.max(output, dim=1)
             # preds = output[:, 0]
-            val_loss += loss.item()
+            val_loss += loss.item()*len(targets)
             if i == 0:
                 all_outputs = output
                 all_targets = targets
@@ -72,7 +72,7 @@ def test(test_loader, model, criterion, args):
             loss = criterion(output, targets)
             # _, preds = torch.max(output, dim=1)
             # preds = output[:, 0]
-            test_loss += loss.item()
+            test_loss += loss.item()*len(targets)
             if i == 0:
                 all_outputs = output
                 all_targets = targets
