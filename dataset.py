@@ -24,7 +24,8 @@ class TrainValDataset(Dataset):
         img_path = self.img_paths[idx]
         label = self.labels[idx]
         # img = Image.open(img_path)
-        img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), -1)
+        img = cv2.imread(img_path)
+        # img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), -1)
         # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         if self.transform:
             # img = self.transform(img)
@@ -58,7 +59,8 @@ class TestDataset(Dataset):
         img_path = self.img_paths[idx]
         label = self.labels[idx]
         # img = Image.open(img_path)
-        img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), -1)
+        img = cv2.imread(img_path)
+        # img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), -1)
         if self.transform:
             # img = self.transform(img)
             img = self.transform(image=img)["image"]

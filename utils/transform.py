@@ -79,19 +79,19 @@ def tv_transform(args):
         transforms.RandomRotation(5),
         AddPepperNoise(0.95, p=0.5),
         transforms.ToTensor(),
-        transforms.Normalize(0.21162076, 0.22596906)
+        transforms.Normalize(0.21191326, 0.21312135)
     ])
 
     val_transforms = transforms.Compose([
         transforms.Resize((args["resize_h"], args["resize_w"])),
         transforms.ToTensor(),
-        transforms.Normalize(0.21162076, 0.22596906)
+        transforms.Normalize(0.21191326, 0.21312135)
     ])
 
     test_transforms = transforms.Compose([
         transforms.Resize((args["resize_h"], args["resize_w"])),
         transforms.ToTensor(),
-        transforms.Normalize(0.21162076, 0.22596906)
+        transforms.Normalize(0.21191326, 0.21312135)
     ])
 
     return train_transforms, val_transforms, test_transforms

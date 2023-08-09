@@ -33,18 +33,18 @@ def args_parser():
     parser.add_argument('--epochs', type=int, default=150)
 
     parser.add_argument('--is_parallel', type=int, default=1)    # DataParallel or not
-    parser.add_argument('--device_ids', type=list, default=[0,1])    # if is_parallel==1, specify the cuda id
+    parser.add_argument('--device_ids', type=list, default=[0, 1])    # if is_parallel==1, specify the cuda id
 
     parser.add_argument('--resume', default="")
     parser.add_argument('--backbone', default="convnextv2_nano.fcmae_ft_in1k")  # efficientnetv2_rw_s.ra2_in1k  convnextv2_nano.fcmae_ft_in1k  resnet50.tv_in1k
-    parser.add_argument('--model_name',  default="convnextv2_n-J-fold3-v2")  # model version
-    parser.add_argument('--train_csv_path', default="../data/TrainSet/csv/J_train_fold3.csv")  # train csv path
-    parser.add_argument('--val_csv_path',  default="../data/TrainSet/csv/J_val_fold3.csv")   # test csv path
-    parser.add_argument('--test_path',  default="../data/TestSet")  # test data path
+    parser.add_argument('--model_name',  default="convnextv2_n-new_data-J-fold3-v2")  # model version
+    parser.add_argument('--train_csv_path', default="../new_data/TrainSet/csv/J_train_fold1.csv")  # train csv path
+    parser.add_argument('--val_csv_path',  default="../new_data/TrainSet/csv/J_val_fold1.csv")   # test csv path
+    parser.add_argument('--test_path',  default="../new_data/TestSet")  # test data path
     parser.add_argument('--saved_path', default='../saved_model/J/convnext')   # model saved path
     parser.add_argument('--ckpt_path', default='../checkpoints/J/convnext')  # checkpoints path for resume
     parser.add_argument('--log_dir', default="../log/J/convnext")  # tensorboard log path
-    parser.add_argument('--metrics_log_path', default="../logs.csv")
+    parser.add_argument('--metrics_log_path', default="../new_logs.csv")
 
     args, _ = parser.parse_known_args()
     return args
