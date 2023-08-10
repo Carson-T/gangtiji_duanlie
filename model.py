@@ -2,106 +2,59 @@ import torch
 import torch.nn as nn
 
 
-class resnet(nn.Module):
-    def __init__(self, pretrained_model, num_classes):
-        super(resnet, self).__init__()
-        self.pretrained_model = pretrained_model
-        self.classifier = nn.Sequential(
-            nn.Linear(self.pretrained_model.fc.in_features, num_classes),
-            # nn.Dropout(0.3),
-            # nn.BatchNorm1d(1024),
-            # nn.ReLU(),
-            # nn.Linear(1024,512),
-            # nn.BatchNorm1d(256),
-            # nn.ReLU(),
-            # nn.Linear(256, num_classes)
-        )
-        self.pretrained_model.fc = self.classifier
+class Resnet(nn.Module):
+    def __init__(self, backbone, num_classes):
+        super(Resnet, self).__init__()
+        self.model = backbone
+        self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
 
     def forward(self, x):
-        output = self.pretrained_model(x)
+        output = self.model(x)
         return output
 
+    def get_head(self):
+        return self.model.fc
 
-class efficientnet(nn.Module):
-    def __init__(self, pretrained_model, num_classes):
-        super(efficientnet, self).__init__()
-        self.pretrained_model = pretrained_model
-        self.classifier = nn.Sequential(
-            nn.Linear(self.pretrained_model.classifier.in_features, num_classes),
-            # nn.Dropout(0.3),
-            # nn.BatchNorm1d(1024),
-            # nn.ReLU(),
-            # nn.Linear(1024,512),
-            # nn.BatchNorm1d(256),
-            # nn.ReLU(),
-            # nn.Linear(256, num_classes)
-        )
-        self.pretrained_model.classifier = self.classifier
+
+
+class Efficientnet(nn.Module):
+    def __init__(self, backbone, num_classes):
+        super(Efficientnet, self).__init__()
+        self.model = backbone
+        self.model.classifier = nn.Linear(self.model.classifier.in_features, num_classes)
 
     def forward(self, x):
-        output = self.pretrained_model(x)
+        output = self.model(x)
         return output
 
+    def get_head(self):
+        return self.model.classifier
 
-class myconvnext(nn.Module):
-    def __init__(self, pretrained_model, num_classes):
-        super(myconvnext, self).__init__()
-        self.pretrained_model = pretrained_model
-        self.classifier = nn.Sequential(
-            nn.Linear(self.pretrained_model.head.fc.in_features, num_classes),
-            # nn.Dropout(0.4),
-            # nn.BatchNorm1d(1024),
-            # nn.ReLU(),
-            # nn.Linear(1024,512),
-            # nn.BatchNorm1d(512),
-            # nn.ReLU(),
-            # nn.Linear(256, num_classes)
-        )
-        self.pretrained_model.head.fc = self.classifier
+class Convnext(nn.Module):
+    def __init__(self, backbone, num_classes):
+        super(Convnext, self).__init__()
+        self.model = backbone
+        self.model.head.fc = nn.Linear(self.model.head.fc.in_features, num_classes)
 
     def forward(self, x):
-        output = self.pretrained_model(x)
+        output = self.model(x)
         return output
 
+    def get_head(self):
+        return self.model.head
 
-class InceptionNext(nn.Module):
-    def __init__(self, pretrained_model, num_classes):
-        super(InceptionNext, self).__init__()
-        self.pretrained_model = pretrained_model
-        self.classifier = nn.Sequential(
-            nn.Linear(self.pretrained_model.head.fc2.in_features, num_classes),
-            # nn.Dropout(0.3),
-            # nn.BatchNorm1d(1024),
-            # nn.ReLU(),
-            # nn.Linear(1024,512),
-            # nn.BatchNorm1d(512),
-            # nn.ReLU(),
-            # nn.Linear(512, num_classes)
+class Convnext_base_tv(nn.Module):
+    def __init__(self, backbone, num_classes):
+        super(Convnext_base_tv, self).__init__()
+        self.model = backbone
+        self.model.classifier = nn.Sequential(
+            *list(self.model.classifier)[:-1],
+            nn.Linear(self.model.head.fc.in_features, num_classes)
         )
-        self.pretrained_model.head.fc2 = self.classifier
 
     def forward(self, x):
-        output = self.pretrained_model(x)
+        output = self.model(x)
         return output
 
-
-class MoGhoNet(nn.Module):
-    def __init__(self, pretrained_model, num_classes):
-        super(MoGhoNet, self).__init__()
-        self.pretrained_model = pretrained_model
-        self.classifier = nn.Sequential(
-            nn.Linear(self.pretrained_model.classifier.in_features, num_classes),
-            # nn.Dropout(0.3),
-            # nn.BatchNorm1d(1024),
-            # nn.ReLU(),
-            # nn.Linear(1024,512),
-            # nn.BatchNorm1d(512),
-            # nn.ReLU(),
-            # nn.Linear(512, num_classes)
-        )
-        self.pretrained_model.classifier = self.classifier
-
-    def forward(self, x):
-        output = self.pretrained_model(x)
-        return output
+    def get_head(self):
+        return self.model.classifier

@@ -29,7 +29,7 @@ def set_seed(seed=2023):
     os.environ['PYTHONHASHSEED'] = str(seed)
 
 
-def main(args, model, groups_params):
+def main(args, model):
     writer = SummaryWriter(log_dir=args["log_dir"] + "/" + args["model_name"])
     # scaler = GradScaler()
     # train_transform, val_transform, test_transform = tv_transform(args)
@@ -56,6 +56,11 @@ def main(args, model, groups_params):
         model.apply(xavier)
     elif args["init"] == "kaiming":
         model.apply(kaiming)
+
+    base_params = filter(lambda p: id(p) not in list(map(id, model.get_head().parameters())),
+                         model.parameters())
+    groups_params = [{"params": base_params, "lr": args["lr"][0]},
+                     {"params": model.get_head().parameters(), "lr": args["lr"][1]}]
 
     if args["optim"] == "AdamW":
         optimizer = torch.optim.AdamW(groups_params, weight_decay=args["weight_decay"])
@@ -139,47 +144,29 @@ def main(args, model, groups_params):
 if __name__ == '__main__':
     args = vars(args_parser())
     set_seed(2023)
-    if args["drop_path_rate"] > 0:
-        pretrained_model = timm.create_model(args["backbone"], drop_rate=args["drop_rate"],
-                                             drop_path_rate=args["drop_path_rate"], pretrained=True)
+
+    if args["pretrained_path"]:
+        model = Convnext_base_tv(models.convnext_base(), args["num_classes"])
+        model.load_state_dict(torch.load(args["pretrained_path"]), strict=False)
     else:
-        pretrained_model = timm.create_model(args["backbone"], drop_rate=args["drop_rate"], pretrained=True)
+        if args["drop_path_rate"] > 0:
+            pretrained_model = timm.create_model(args["backbone"], drop_rate=args["drop_rate"],
+                                                 drop_path_rate=args["drop_path_rate"], pretrained=True)
+        else:
+            pretrained_model = timm.create_model(args["backbone"], drop_rate=args["drop_rate"], pretrained=True)
 
-    if "resnet" in args["backbone"]:
-        model = resnet(pretrained_model, args["num_classes"])
-        base_params = filter(lambda p: id(p) not in list(map(id, model.pretrained_model.fc.parameters())),
-                             model.parameters())
-        groups_params = [{"params": base_params, "lr": args["lr"][0]},
-                         {"params": model.pretrained_model.fc.parameters(), "lr": args["lr"][1]}]
-    elif "efficientnet" in args["backbone"]:
-        model = efficientnet(pretrained_model, args["num_classes"])
-        base_params = filter(lambda p: id(p) not in list(map(id, model.pretrained_model.classifier.parameters())),
-                             model.parameters())
-        groups_params = [{"params": base_params, "lr": args["lr"][0]},
-                         {"params": model.pretrained_model.classifier.parameters(), "lr": args["lr"][1]}]
+        if "resnet" in args["backbone"]:
+            model = Resnet(pretrained_model, args["num_classes"])
 
-    elif "convnext" in args["backbone"]:
-        model = myconvnext(pretrained_model, args["num_classes"])
-        base_params = filter(lambda p: id(p) not in list(map(id, model.pretrained_model.head.parameters())),
-                             model.parameters())
-        groups_params = [{"params": base_params, "lr": args["lr"][0]},
-                         {"params": model.pretrained_model.head.parameters(), "lr": args["lr"][1]}]
+        elif "efficientnet" in args["backbone"]:
+            model = Efficientnet(pretrained_model, args["num_classes"])
 
-    elif "inceptionnext" in args["backbone"]:
-        model = InceptionNext(pretrained_model, args["num_classes"])
-        base_params = filter(lambda p: id(p) not in list(map(id, model.pretrained_model.head.parameters())),
-                             model.parameters())
-        groups_params = [{"params": base_params, "lr": args["lr"][0]},
-                         {"params": model.pretrained_model.head.parameters(), "lr": args["lr"][1]}]
+        elif "convnext" in args["backbone"]:
+            if "tv" in args["backbone"]:
+                model = Convnext_base_tv(pretrained_model, args["num_classes"])
+            model = Convnext(pretrained_model, args["num_classes"])
 
-    elif "mobilenet" or "ghostnet" in args["backbone"]:
-        model = MoGhoNet(pretrained_model, args["num_classes"])
-        base_params = filter(lambda p: id(p) not in list(map(id, model.pretrained_model.classifier.parameters())),
-                             model.parameters())
-        groups_params = [{"params": base_params, "lr": args["lr"][0]},
-                         {"params": model.pretrained_model.classifier.parameters(), "lr": args["lr"][1]}]
-
-    main(args, model, groups_params)
+    main(args, model)
 
     with open(args["log_dir"] + "/" + args["model_name"] + "/parameters.json", "w+") as f:
         json.dump(args, f)

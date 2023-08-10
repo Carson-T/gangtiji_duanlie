@@ -36,6 +36,7 @@ def args_parser():
     parser.add_argument('--device_ids', type=list, default=[0, 1])    # if is_parallel==1, specify the cuda id
 
     parser.add_argument('--resume', default="")
+    parser.add_argument('--pretrained_path', default="")
     parser.add_argument('--backbone', default="convnextv2_nano.fcmae_ft_in1k")  # efficientnetv2_rw_s.ra2_in1k  convnextv2_nano.fcmae_ft_in1k  resnet50.tv_in1k
     parser.add_argument('--model_name',  default="convnextv2_n-new_data-J-fold3-v2")  # model version
     parser.add_argument('--train_csv_path', default="../new_data/TrainSet/csv/J_train_fold1.csv")  # train csv path
