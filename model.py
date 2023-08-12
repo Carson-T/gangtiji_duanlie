@@ -49,7 +49,7 @@ class Convnext_base_tv(nn.Module):
         self.model = backbone
         self.model.classifier = nn.Sequential(
             *list(self.model.classifier)[:-1],
-            nn.Linear(self.model.head.fc.in_features, num_classes)
+            nn.Linear(1024, num_classes)
         )
 
     def forward(self, x):

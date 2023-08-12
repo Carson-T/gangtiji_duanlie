@@ -49,18 +49,19 @@ def main(args, model):
     print("num of val images:", len(val_loader.dataset))
     print("num of test images:", len(test_loader.dataset))
 
+    head = model.get_head()
+    base_params = filter(lambda p: id(p) not in list(map(id, head.parameters())),
+                         model.parameters())
+    groups_params = [{"params": base_params, "lr": args["lr"][0]},
+                     {"params": head.parameters(), "lr": args["lr"][1]}]
+
     if args["is_parallel"] == 1:
         model = nn.DataParallel(model, device_ids=args["device_ids"])
     model.to(args["device"])
-    if args["init"] == "xavier":
-        model.apply(xavier)
-    elif args["init"] == "kaiming":
-        model.apply(kaiming)
-
-    base_params = filter(lambda p: id(p) not in list(map(id, model.get_head().parameters())),
-                         model.parameters())
-    groups_params = [{"params": base_params, "lr": args["lr"][0]},
-                     {"params": model.get_head().parameters(), "lr": args["lr"][1]}]
+    # if args["init"] == "xavier":
+    #     model.apply(xavier)
+    # elif args["init"] == "kaiming":
+    #     model.apply(kaiming)
 
     if args["optim"] == "AdamW":
         optimizer = torch.optim.AdamW(groups_params, weight_decay=args["weight_decay"])
@@ -146,8 +147,9 @@ if __name__ == '__main__':
     set_seed(2023)
 
     if args["pretrained_path"]:
-        model = Convnext_base_tv(models.convnext_base(), args["num_classes"])
-        model.load_state_dict(torch.load(args["pretrained_path"]), strict=False)
+        pretrained_model = models.convnext_base()
+        pretrained_model.load_state_dict(torch.load(args["pretrained_path"]), strict=True)
+        model = Convnext_base_tv(pretrained_model, args["num_classes"])
     else:
         if args["drop_path_rate"] > 0:
             pretrained_model = timm.create_model(args["backbone"], drop_rate=args["drop_rate"],
@@ -162,8 +164,6 @@ if __name__ == '__main__':
             model = Efficientnet(pretrained_model, args["num_classes"])
 
         elif "convnext" in args["backbone"]:
-            if "tv" in args["backbone"]:
-                model = Convnext_base_tv(pretrained_model, args["num_classes"])
             model = Convnext(pretrained_model, args["num_classes"])
 
     main(args, model)
