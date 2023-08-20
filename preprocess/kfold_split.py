@@ -3,20 +3,30 @@ import os
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
 
-classes = ["1.静息-标准", "2.静息-非标准"]  # label dictionary
-# G = ["G6", "G7", "G8", "G10"]
-path = "../../new_data/TrainSet"
+root_path = "../../data_3subimg/TrainSet"
+duanlie_path = "../../data_3subimg/TrainSet/断裂"
+feiduanlie_path = "../../data_3subimg/TrainSet/非断裂"
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=2023)
 
 img_paths = []
 labels = []
 
-for class_name in classes:
-    class_dir = os.path.join(path, class_name)
-    for file_name in os.listdir(class_dir):
-        img_path = os.path.join(class_dir, file_name)[3:]
-        img_paths.append(img_path)
-        labels.append(class_name)
+for group in ["左侧","右侧","双侧"]:
+    group_dir = os.path.join(duanlie_path, group)
+    duanlie_list = os.listdir(group_dir)
+    for file_name in duanlie_list:
+        img_path = os.path.join(group_dir, file_name)[3:]
+        if img_path[:-9]+img_path[-4:] not in img_paths:
+            img_paths.append(img_path[:-9]+img_path[-4:])
+            labels.append("断裂")
+
+feiduanlie_list = os.listdir(feiduanlie_path)
+for file_name in feiduanlie_list:
+    img_path = os.path.join(feiduanlie_path, file_name)[3:]
+    if img_path[:-9]+img_path[-4:] not in img_paths:
+        img_paths.append(img_path[:-9]+img_path[-4:])
+        labels.append("非断裂")
+
 
 img_paths = np.array(img_paths)
 labels = np.array(labels)
@@ -30,7 +40,7 @@ for k, (train_idx, val_idx) in enumerate(kf.split(img_paths, labels)):
 
     train_df.insert(loc=len(train_df.columns), column="path", value=train_path)
     train_df.insert(loc=len(train_df.columns), column="label", value=train_labels)
-    train_df.to_csv(f"csv/J_train_fold{k + 1}.csv", index=False)
+    train_df.to_csv(root_path+f"/csv/train_fold{k + 1}.csv", index=False)
     val_df.insert(loc=len(val_df.columns), column="path", value=val_path)
     val_df.insert(loc=len(val_df.columns), column="label", value=val_labels)
-    val_df.to_csv(f"csv/J_val_fold{k + 1}.csv", index=False)
+    val_df.to_csv(root_path+f"/csv/val_fold{k + 1}.csv", index=False)

@@ -8,11 +8,11 @@ from tqdm import *
 def train(train_loader, model, criterion, optimizer, args):
     model.train()
     training_loss = 0.0
-    for i, (images, targets) in enumerate(tqdm(train_loader)):
-        images = images.to(args["device"])
+    for i, (img_list, targets) in enumerate(tqdm(train_loader)):
+        img_list = [img.to(args["device"]) for img in img_list]
         targets = targets.to(args["device"])
         # with autocast():
-        output = model(images)
+        output = model(img_list)
         loss = criterion(output, targets)
         # _, preds = torch.max(output, dim=1)
         # preds = output[:, 0]
@@ -40,11 +40,11 @@ def val(val_loader, model, criterion, args):
     model.eval()
     val_loss = 0.0
     with torch.no_grad():
-        for i, (images, targets) in enumerate(tqdm(val_loader)):
-            images = images.to(args["device"])
+        for i, (img_list, targets) in enumerate(tqdm(val_loader)):
+            img_list = [img.to(args["device"]) for img in img_list]
             targets = targets.to(args["device"])
             # with autocast():
-            output = model(images)
+            output = model(img_list)
             loss = criterion(output, targets)
             # _, preds = torch.max(output, dim=1)
             # preds = output[:, 0]
@@ -64,11 +64,11 @@ def test(test_loader, model, criterion, args):
     model.eval()
     test_loss = 0.0
     with torch.no_grad():
-        for i, (images, targets) in enumerate(tqdm(test_loader)):
-            images = images.to(args["device"])
+        for i, (img_list, targets) in enumerate(tqdm(test_loader)):
+            img_list = [img.to(args["device"]) for img in img_list]
             targets = targets.to(args["device"])
             # with autocast():
-            output = model(images)
+            output = model(img_list)
             loss = criterion(output, targets)
             # _, preds = torch.max(output, dim=1)
             # preds = output[:, 0]

@@ -51,22 +51,19 @@ def at_transform(args):
         albumentations.ShiftScaleRotate(shift_limit=0.2, scale_limit=0.2, rotate_limit=20, border_mode=0, p=0.5),
         albumentations.CoarseDropout(max_holes=1, max_height=int(args["resize_h"] * 0.3),
                                      max_width=int(args["resize_w"] * 0.3), min_height=1, min_width=1, p=0.5 if args["Cutout"] == 1 else 0),
-        albumentations.Normalize([0.22570096, 0.21439962, 0.20035854],
-                                 [0.22492044, 0.21637627, 0.20286143]),
+        albumentations.Normalize(),
         AT.ToTensorV2()
     ])
 
     val_transforms = albumentations.Compose([
         albumentations.Resize(args["resize_h"], args["resize_w"]),
-        albumentations.Normalize([0.22570096, 0.21439962, 0.20035854],
-                                 [0.22492044, 0.21637627, 0.20286143]),
+        albumentations.Normalize(),
         AT.ToTensorV2()
     ])
 
     test_transforms = albumentations.Compose([
         albumentations.Resize(args["resize_h"], args["resize_w"]),
-        albumentations.Normalize([0.22570096, 0.21439962, 0.20035854],
-                                 [0.22492044, 0.21637627, 0.20286143]),
+        albumentations.Normalize(),
         AT.ToTensorV2()
     ])
 
@@ -82,19 +79,19 @@ def tv_transform(args):
         transforms.RandomRotation(5),
         AddPepperNoise(0.95, p=0.5),
         transforms.ToTensor(),
-        transforms.Normalize(0.21191326, 0.21312135)
+        transforms.Normalize()
     ])
 
     val_transforms = transforms.Compose([
         transforms.Resize((args["resize_h"], args["resize_w"])),
         transforms.ToTensor(),
-        transforms.Normalize(0.21191326, 0.21312135)
+        transforms.Normalize()
     ])
 
     test_transforms = transforms.Compose([
         transforms.Resize((args["resize_h"], args["resize_w"])),
         transforms.ToTensor(),
-        transforms.Normalize(0.21191326, 0.21312135)
+        transforms.Normalize()
     ])
 
     return train_transforms, val_transforms, test_transforms

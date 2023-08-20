@@ -34,14 +34,14 @@ def main(args, model):
     # scaler = GradScaler()
     # train_transform, val_transform, test_transform = tv_transform(args)
     train_transform, val_transform, test_transform = at_transform(args)
-    train_loader = DataLoader(TrainValDataset(args["train_csv_path"], train_transform, args["mode"]),
+    train_loader = DataLoader(TrainValDataset(args["train_csv_path"], train_transform),
                               batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"],
                               pin_memory=True, drop_last=True)
-    val_loader = DataLoader(TrainValDataset(args["val_csv_path"], val_transform, args["mode"]),
+    val_loader = DataLoader(TrainValDataset(args["val_csv_path"], val_transform),
                             batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"],
                             pin_memory=True, drop_last=True)
 
-    test_loader = DataLoader(TestDataset(args["test_path"], test_transform, args["mode"]),
+    test_loader = DataLoader(TestDataset(args["test_path"], test_transform),
                              batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
                              pin_memory=True, drop_last=False)
 
@@ -58,10 +58,10 @@ def main(args, model):
     if args["is_parallel"] == 1:
         model = nn.DataParallel(model, device_ids=args["device_ids"])
     model.to(args["device"])
-    # if args["init"] == "xavier":
-    #     model.apply(xavier)
-    # elif args["init"] == "kaiming":
-    #     model.apply(kaiming)
+    if args["init"] == "xavier":
+        model.apply(xavier)
+    elif args["init"] == "kaiming":
+        model.apply(kaiming)
 
     if args["optim"] == "AdamW":
         optimizer = torch.optim.AdamW(groups_params, weight_decay=args["weight_decay"])
@@ -69,11 +69,12 @@ def main(args, model):
         optimizer = torch.optim.SGD(groups_params, momentum=0.9, weight_decay=args["weight_decay"])
 
     if args["loss_func"] == "CEloss":
-        loss_func = torch.nn.CrossEntropyLoss().to(args["device"])
+        weight = 2015 / torch.tensor([378, 2015]).to(args["device"])
+        loss_func = torch.nn.CrossEntropyLoss(weight=weight).to(args["device"])
     # elif args["loss_func"] == "FocalLoss":
     #     loss_func = FocalLoss().to(args["device"])
     elif args["loss_func"] == "LabelSmoothLoss":
-        weight = torch.Tensor([1.0, 1.0]).to(args["device"])
+        weight = 2015 / torch.tensor([378, 2015]).to(args["device"])
         loss_func = LabelSmoothLoss(weight).to(args["device"])
 
     if args["lr_scheduler"] == "Warm-up-Cosine-Annealing":
@@ -130,17 +131,18 @@ def main(args, model):
                             "test_loss": test_loss / len(test_targets)}, iter)
 
         if test_auc > best_test_auc:
-            best_epoch_metrics = [round(i,4) for i in [train_acc, val_acc, test_acc, train_auc, val_auc, test_auc]]
+            best_epoch_metrics = [round(i, 4) for i in [train_acc, val_acc, test_acc, train_auc, val_auc, test_auc]]
             best_test_auc = test_auc
             plot_matrix(test_targets, test_preds, [0, 1],
                         args["log_dir"] + "/" + args["model_name"] + "/confusion_matrix.jpg",
-                        ['standards', 'non-standards'])
+                        ['fractured', 'non-fractured'])
             torch.save(model.state_dict(), args["saved_path"] + "/" + args["model_name"] + ".pth")
 
         if iter % 10 == 0:
             save_ckpt(args, model, optimizer, lr_scheduler, iter, best_test_auc)
 
     log_metrics(best_epoch_metrics, args)
+
 
 if __name__ == '__main__':
     args = vars(args_parser())
@@ -149,7 +151,7 @@ if __name__ == '__main__':
     if args["pretrained_path"]:
         pretrained_model = models.convnext_base()
         pretrained_model.load_state_dict(torch.load(args["pretrained_path"]), strict=True)
-        model = Convnext_base_tv(pretrained_model, args["num_classes"])
+        # model = Convnext_base_tv(pretrained_model, args["num_classes"])
     else:
         if args["drop_path_rate"] > 0:
             pretrained_model = timm.create_model(args["backbone"], drop_rate=args["drop_rate"],

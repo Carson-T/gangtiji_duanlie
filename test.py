@@ -37,7 +37,7 @@ class TestDataset(Dataset):
         if self.transform:
             # img = self.transform(img)
             img = self.transform(image=img)["image"]
-        return img, label
+        return img, label, img_path
 
     def _make_dataset(self):
         img_paths = []
@@ -84,16 +84,18 @@ def load_model(model, model_path, device):
 def test(test_loader, model, device):
     model.eval()
     with torch.no_grad():
-        for i, (images, targets) in enumerate(tqdm(test_loader)):
+        for i, (images, targets, img_paths) in enumerate(tqdm(test_loader)):
             images = images.to(device)
             targets = targets.to(device)
             output = model(images)
             if i == 0:
                 all_outputs = output
                 all_targets = targets
+                all_img_paths = img_paths
             else:
                 all_outputs = torch.cat((all_outputs, output))
                 all_targets = torch.cat((all_targets, targets))
+                all_img_paths = torch.cat((all_img_paths, img_paths))
     all_outputs = F.softmax(all_outputs, dim=1)
 
     return all_outputs.cpu().detach(), all_targets.cpu().detach()
@@ -117,19 +119,19 @@ if __name__ == '__main__':
     models = [model1]*5
 
     model_paths = [                  # J 静息 model weights
-        "../saved_model/J/convnext/convnextv2_n-new_data-J-fold1-v1.pth",
-        "../saved_model/J/convnext/convnextv2_n-new_data-J-fold2-v1.pth",
-        "../saved_model/J/convnext/convnextv2_n-new_data-J-fold3-v1.pth",
-        "../saved_model/J/convnext/convnextv2_n-new_data-J-fold4-v1.pth",
-        "../saved_model/J/convnext/convnextv2_n-new_data-J-fold5-v1.pth"
+        "saved_model/J/convnext/convnextv2_n-new_data-J-fold1-v1.pth",
+        "saved_model/J/convnext/convnextv2_n-new_data-J-fold2-v1.pth",
+        "saved_model/J/convnext/convnextv2_n-new_data-J-fold3-v1.pth",
+        "saved_model/J/convnext/convnextv2_n-new_data-J-fold4-v1.pth",
+        "saved_model/J/convnext/convnextv2_n-new_data-J-fold5-v1.pth"
         ]
 
     # model_paths = [                # V Valsalva model weights
-    #     "../saved_model/V/convnext/convnextv2_n-new_data-V-fold1-v1.pth",
-    #     "../saved_model/V/convnext/convnextv2_n-new_data-V-fold2-v1.pth",
-    #     "../saved_model/V/convnext/convnextv2_n-new_data-V-fold3-v1.pth",
-    #     "../saved_model/V/convnext/convnextv2_n-new_data-V-fold4-v1.pth",
-    #     "../saved_model/V/convnext/convnextv2_n-new_data-V-fold5-v1.pth"
+    #     "saved_model/V/convnext/convnextv2_n-new_data-V-fold1-v1.pth",
+    #     "saved_model/V/convnext/convnextv2_n-new_data-V-fold2-v1.pth",
+    #     "saved_model/V/convnext/convnextv2_n-new_data-V-fold3-v1.pth",
+    #     "saved_model/V/convnext/convnextv2_n-new_data-V-fold4-v1.pth",
+    #     "saved_model/V/convnext/convnextv2_n-new_data-V-fold5-v1.pth"
     #     ]
 
 

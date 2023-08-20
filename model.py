@@ -33,28 +33,20 @@ class Efficientnet(nn.Module):
 class Convnext(nn.Module):
     def __init__(self, backbone, num_classes):
         super(Convnext, self).__init__()
-        self.model = backbone
-        self.model.head.fc = nn.Linear(self.model.head.fc.in_features, num_classes)
-
-    def forward(self, x):
-        output = self.model(x)
-        return output
-
-    def get_head(self):
-        return self.model.head
-
-class Convnext_base_tv(nn.Module):
-    def __init__(self, backbone, num_classes):
-        super(Convnext_base_tv, self).__init__()
-        self.model = backbone
-        self.model.classifier = nn.Sequential(
-            *list(self.model.classifier)[:-1],
-            nn.Linear(1024, num_classes)
+        self.models = [backbone]*3
+        self.classifier = nn.Sequential(
+            nn.Linear(backbone.head.fc.in_features*3, num_classes),
         )
 
     def forward(self, x):
-        output = self.model(x)
+        output = torch.tensor([])
+        for i in range(len(x)):
+            pre_logits = self.models[i].forward_features(x[i])
+            pre_logits = self.models[i].forward_head(pre_logits, pre_logits=True)
+            output = torch.hstack([output, pre_logits])
+        output = self.classifier(output)
         return output
 
     def get_head(self):
-        return self.model.classifier
+        return self.classifier
+
