@@ -1,5 +1,5 @@
 import torch.optim.lr_scheduler
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, sampler
 from torch.cuda.amp import GradScaler
 import torch.backends.cudnn as cudnn
 from torchvision import models
@@ -34,11 +34,19 @@ def main(args, model):
     # scaler = GradScaler()
     # train_transform, val_transform, test_transform = tv_transform(args)
     train_transform, val_transform, test_transform = at_transform(args)
-    train_loader = DataLoader(TrainValDataset(args["train_csv_path"], train_transform),
-                              batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"],
-                              pin_memory=True, drop_last=True)
+
+    train_dataset = TrainValDataset(args["train_csv_path"], train_transform)
+    class_weight = 2015 / torch.tensor([378, 2015])
+    sample_weight = [class_weight[i] for i in train_dataset.labels]
+    if args["sampler"] == "WeightedRandomSampler":
+        mysampler = sampler.WeightedRandomSampler(sample_weight, args["batch_size"])
+    else:
+        mysampler = None
+
+    train_loader = DataLoader(train_dataset, sampler=mysampler, batch_size=args["batch_size"], shuffle=False,
+                              num_workers=args["num_workers"], pin_memory=True, drop_last=True)
     val_loader = DataLoader(TrainValDataset(args["val_csv_path"], val_transform),
-                            batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"],
+                            batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
                             pin_memory=True, drop_last=True)
 
     test_loader = DataLoader(TestDataset(args["test_path"], test_transform),
@@ -68,14 +76,13 @@ def main(args, model):
     elif args["optim"] == "SGD":
         optimizer = torch.optim.SGD(groups_params, momentum=0.9, weight_decay=args["weight_decay"])
 
+    class_weight = class_weight.to(args["device"])
     if args["loss_func"] == "CEloss":
-        weight = 2015 / torch.tensor([378, 2015]).to(args["device"])
-        loss_func = torch.nn.CrossEntropyLoss(weight=weight).to(args["device"])
+        loss_func = torch.nn.CrossEntropyLoss(weight=class_weight).to(args["device"])
     # elif args["loss_func"] == "FocalLoss":
     #     loss_func = FocalLoss().to(args["device"])
     elif args["loss_func"] == "LabelSmoothLoss":
-        weight = 2015 / torch.tensor([378, 2015]).to(args["device"])
-        loss_func = LabelSmoothLoss(weight).to(args["device"])
+        loss_func = LabelSmoothLoss(weight=class_weight).to(args["device"])
 
     if args["lr_scheduler"] == "Warm-up-Cosine-Annealing":
         init_ratio, warm_up_steps, min_lr_ratio, max_steps = args["init_ratio"], args["epochs"] / 10, args[

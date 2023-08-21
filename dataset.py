@@ -44,11 +44,11 @@ class TrainValDataset(Dataset):
 
 
 class TestDataset(Dataset):
-    def __init__(self, testpath, transform, mode):
+    def __init__(self, testpath, transform):
         super(TestDataset, self).__init__()
         self.testpath = testpath
         self.class_dict = {"断裂": 0, "非断裂": 1}
-        self.groups = ["1.佛山市医", "2.湖南省妇幼", "3.广医附三", "4.白银", "5.陕西省人民医院"]
+        self.groups = ["1.佛山市医", "2.湖南省妇幼", "3.广医三院", "4.白银", "5.陕西省人民医院"]
         self.transform = transform
         self.img_paths, self.labels = self._make_dataset()  # make dataset
 
@@ -82,16 +82,16 @@ class TestDataset(Dataset):
                     for ce in ["左侧", "右侧", "双侧"]:
                         ce_path = os.path.join(class_path, ce)
                         for file_name in os.listdir(ce_path):
-                            img_path = os.path.join(ce_path, filename)
+                            img_path = os.path.join(ce_path, file_name)
                             if img_path[:-9] + img_path[-4:] not in img_paths:
-                                img_paths.append(img_path)
+                                img_paths.append(img_path[:-9] + img_path[-4:])
                                 labels.append(label)
 
                 else:
                     for file_name in os.listdir(class_path):
-                        img_path = os.path.join(class_path, filename)
+                        img_path = os.path.join(class_path, file_name)
                         if img_path[:-9] + img_path[-4:] not in img_paths:
-                            img_paths.append(img_path)
+                            img_paths.append(img_path[:-9] + img_path[-4:])
                             labels.append(label)
 
         return img_paths, labels

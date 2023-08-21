@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import copy
 
 
 class Resnet(nn.Module):
@@ -33,17 +34,22 @@ class Efficientnet(nn.Module):
 class Convnext(nn.Module):
     def __init__(self, backbone, num_classes):
         super(Convnext, self).__init__()
-        self.models = [backbone]*3
+        self.branch1 = backbone
+        self.branch2 = copy.deepcopy(backbone)
+        self.branch3 = copy.deepcopy(backbone)
+        self.branchs = nn.ModuleList([self.branch1, self.branch2, self.branch3])
         self.classifier = nn.Sequential(
             nn.Linear(backbone.head.fc.in_features*3, num_classes),
         )
 
     def forward(self, x):
-        output = torch.tensor([])
         for i in range(len(x)):
-            pre_logits = self.models[i].forward_features(x[i])
-            pre_logits = self.models[i].forward_head(pre_logits, pre_logits=True)
-            output = torch.hstack([output, pre_logits])
+            features = self.branchs[i].forward_features(x[i])
+            pre_logits = self.branchs[i].forward_head(features, pre_logits=True)
+            if i == 0:
+                output = pre_logits
+            else:
+                output = torch.hstack([output, pre_logits])
         output = self.classifier(output)
         return output
 
