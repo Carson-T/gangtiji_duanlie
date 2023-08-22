@@ -45,12 +45,12 @@ def at_transform(args):
             albumentations.OpticalDistortion(distort_limit=2.0),  # 光学畸变
             albumentations.GridDistortion(num_steps=5, distort_limit=1.),
             albumentations.ElasticTransform(alpha=3),  # 弹性变换
-        ], p=0.5 if args["OGE"] == 1 else 0),
-        albumentations.CLAHE(clip_limit=4, p=0.5 if args["CLAHE"] == 1 else 0),
+        ], p=0.8 if args["OGE"] == 1 else 0),
+        albumentations.CLAHE(clip_limit=4, p=0.8 if args["CLAHE"] == 1 else 0),
         albumentations.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=20, val_shift_limit=20, p=0.5),
         albumentations.ShiftScaleRotate(shift_limit=0.2, scale_limit=0.2, rotate_limit=20, border_mode=0, p=0.5),
         albumentations.CoarseDropout(max_holes=1, max_height=int(args["resize_h"] * 0.3),
-                                     max_width=int(args["resize_w"] * 0.3), min_height=1, min_width=1, p=0.5 if args["Cutout"] == 1 else 0),
+                                     max_width=int(args["resize_w"] * 0.3), min_height=1, min_width=1, p=0.8 if args["Cutout"] == 1 else 0),
         albumentations.Normalize(),
         AT.ToTensorV2()
     ])

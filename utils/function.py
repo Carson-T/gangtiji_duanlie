@@ -33,6 +33,10 @@ def log_metrics(best_epoch_metrics, args):
                              "test_acc": best_epoch_metrics[2],
                              "train_auc": best_epoch_metrics[3],
                              "valid_auc": best_epoch_metrics[4],
-                             "test_auc": best_epoch_metrics[5]}, index=[0])
+                             "test_auc": best_epoch_metrics[5],
+                             "train_auprc": best_epoch_metrics[6],
+                             "valid_auprc": best_epoch_metrics[7],
+                             "test_auprc": best_epoch_metrics[8]
+                             }, index=[0])
     data = pd.concat([data,new_data])
     data.to_csv(args["metrics_log_path"], index=False)

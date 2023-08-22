@@ -6,7 +6,7 @@ from torchvision import models
 import json
 import random
 import timm
-from sklearn.metrics import roc_auc_score, roc_curve, auc
+from sklearn.metrics import roc_auc_score, precision_recall_curve, auc
 from torch.utils.tensorboard import SummaryWriter
 from train import *
 from dataset import *
@@ -36,15 +36,16 @@ def main(args, model):
     train_transform, val_transform, test_transform = at_transform(args)
 
     train_dataset = TrainValDataset(args["train_csv_path"], train_transform)
-    class_weight = 2015 / torch.tensor([378, 2015])
-    sample_weight = [class_weight[i] for i in train_dataset.labels]
+    class_weight = (2015+378) / torch.tensor([378, 2015])
+    sample_weight = torch.tensor([class_weight[i] for i in train_dataset.labels])
     if args["sampler"] == "WeightedRandomSampler":
-        mysampler = sampler.WeightedRandomSampler(sample_weight, args["batch_size"])
+        mysampler = sampler.WeightedRandomSampler(sample_weight, len(sample_weight))
     else:
         mysampler = None
 
-    train_loader = DataLoader(train_dataset, sampler=mysampler, batch_size=args["batch_size"], shuffle=False,
-                              num_workers=args["num_workers"], pin_memory=True, drop_last=True)
+    train_loader = DataLoader(train_dataset, sampler=mysampler, batch_size=args["batch_size"], 
+                            shuffle=False if args["sampler"] else True, num_workers=args["num_workers"],
+                            pin_memory=True, drop_last=True)
     val_loader = DataLoader(TrainValDataset(args["val_csv_path"], val_transform),
                             batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
                             pin_memory=True, drop_last=True)
@@ -78,7 +79,8 @@ def main(args, model):
 
     class_weight = class_weight.to(args["device"])
     if args["loss_func"] == "CEloss":
-        loss_func = torch.nn.CrossEntropyLoss(weight=class_weight).to(args["device"])
+        loss_func = torch.nn.CrossEntropyLoss(weight=class_weight if args["use_weighted_loss"] == 1 
+                                            else None).to(args["device"])
     # elif args["loss_func"] == "FocalLoss":
     #     loss_func = FocalLoss().to(args["device"])
     elif args["loss_func"] == "LabelSmoothLoss":
@@ -124,21 +126,33 @@ def main(args, model):
         val_auc = roc_auc_score(val_targets, val_outputs[:, 1])
         test_auc = roc_auc_score(test_targets, test_outputs[:, 1])
 
+        precision, recall, _ = precision_recall_curve(train_targets, train_outputs[:, 1])
+        train_auprc = auc(recall, precision)
+        precision, recall, _ = precision_recall_curve(val_targets, val_outputs[:, 1])
+        val_auprc = auc(recall, precision)
+        precision, recall, _ = precision_recall_curve(test_targets, test_outputs[:, 1])
+        test_auprc = auc(recall, precision)
+
+
         print(f'Epoch {iter}: train acc: {train_acc}')
         print(f'Epoch {iter}: val acc: {val_acc}')
         print(f'Epoch {iter}: test acc: {test_acc}')
         print(f'Epoch {iter}: train auc: {train_auc}')
         print(f'Epoch {iter}: val auc: {val_auc}')
         print(f'Epoch {iter}: test auc: {test_auc}')
+        print(f'Epoch {iter}: train auprc: {train_auprc}')
+        print(f'Epoch {iter}: val auprc: {val_auprc}')
+        print(f'Epoch {iter}: test auprc: {test_auprc}')
 
         writer.add_scalars("acc", {"train_acc": train_acc, "val_acc": val_acc, "test_acc": test_acc}, iter)
         writer.add_scalars("auc", {"train_auc": train_auc, "val_auc": val_auc, "test_auc": test_auc}, iter)
+        writer.add_scalars("auprc", {"train_auprc": train_auprc, "val_auprc": val_auprc, "test_auprc": test_auprc}, iter)
         writer.add_scalars("loss",
                            {"train_loss": train_loss / len(train_targets), "val_loss": val_loss / len(val_targets),
                             "test_loss": test_loss / len(test_targets)}, iter)
 
         if test_auc > best_test_auc:
-            best_epoch_metrics = [round(i, 4) for i in [train_acc, val_acc, test_acc, train_auc, val_auc, test_auc]]
+            best_epoch_metrics = [round(i, 4) for i in [train_acc, val_acc, test_acc, train_auc, val_auc, test_auc, train_auprc, val_auprc, test_auprc]]
             best_test_auc = test_auc
             plot_matrix(test_targets, test_preds, [0, 1],
                         args["log_dir"] + "/" + args["model_name"] + "/confusion_matrix.jpg",
