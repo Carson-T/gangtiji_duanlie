@@ -25,6 +25,14 @@ def save_ckpt(args, model, optimizer, lr_scheduler, epoch, best_metric):
     torch.save(state, os.path.join(args["ckpt_path"], args["model_name"] + ".pth.tar"))
 
 
+def calculate_metrics(outputs, targets, loss):
+    preds = torch.argmax(outputs, dim=1)
+    acc = (preds == targets).sum().item() / len(targets)
+    auc = roc_auc_score(targets, outputs[:, 1])
+    precision, recall, _ = precision_recall_curve(targets, outputs[:, 1])
+    auprc = auc(recall, precision)
+    return acc, auc, auprc
+
 def log_metrics(best_epoch_metrics, args):
     data = pd.read_csv(args["metrics_log_path"])
     new_data = pd.DataFrame({"model_name": args["model_name"],

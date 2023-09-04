@@ -34,20 +34,25 @@ def main(args, model):
     # scaler = GradScaler()
     # train_transform, val_transform, test_transform = tv_transform(args)
     train_transform, val_transform, test_transform = at_transform(args)
+    
+    if args["validation"] == 1:
+        train_dataset = TrainValDataset(args["train_csv_path"], train_transform)
+        val_loader = DataLoader(TrainValDataset(args["val_csv_path"], val_transform),
+                            batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
+                            pin_memory=True, drop_last=True)
 
-    train_dataset = TrainValDataset(args["train_csv_path"], train_transform)
-    class_weight = (2015+378) / torch.tensor([378, 2015])
-    sample_weight = torch.tensor([class_weight[i] for i in train_dataset.labels])
+    else:
+        train_dataset = NoValDataset("../data_3subimg", train_transform)
+
     if args["sampler"] == "WeightedRandomSampler":
+        class_weight = (2015+378) / torch.tensor([378, 2015])
+        sample_weight = torch.tensor([class_weight[i] for i in train_dataset.labels])
         mysampler = sampler.WeightedRandomSampler(sample_weight, len(sample_weight))
     else:
         mysampler = None
 
     train_loader = DataLoader(train_dataset, sampler=mysampler, batch_size=args["batch_size"], 
                             shuffle=False if args["sampler"] else True, num_workers=args["num_workers"],
-                            pin_memory=True, drop_last=True)
-    val_loader = DataLoader(TrainValDataset(args["val_csv_path"], val_transform),
-                            batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
                             pin_memory=True, drop_last=True)
 
     test_loader = DataLoader(TestDataset(args["test_path"], test_transform),
@@ -77,7 +82,7 @@ def main(args, model):
     elif args["optim"] == "SGD":
         optimizer = torch.optim.SGD(groups_params, momentum=0.9, weight_decay=args["weight_decay"])
 
-    class_weight = class_weight.to(args["device"])
+    class_weight = (2015+378) / torch.tensor([378, 2015]).to(args["device"])
     if args["loss_func"] == "CEloss":
         loss_func = torch.nn.CrossEntropyLoss(weight=class_weight if args["use_weighted_loss"] == 1 
                                             else None).to(args["device"])
@@ -110,38 +115,25 @@ def main(args, model):
 
     for iter in range(init_epoch, args["epochs"] + 1):
         train_outputs, train_targets, train_loss = train(train_loader, model, loss_func, optimizer, args)
-        val_outputs, val_targets, val_loss = val(val_loader, model, loss_func, args)
+        train_acc, train_auc, train_auprc = calculate_metrics(train_outputs, train_targets, train_loss)
+        if args["validation"] == 1:
+            val_outputs, val_targets, val_loss = val(val_loader, model, loss_func, args)
+            val_acc, val_auc, val_auprc = calculate_metrics(val_outputs, val_targets, val_loss)
+        else:
+            val_loss = 0.0
+            val_acc, val_auc, val_auprc = 0.0, 0.0, 0.0
         test_outputs, test_targets, test_loss = test(test_loader, model, loss_func, args)
+        test_acc, test_auc, test_auprc = calculate_metrics(test_outputs, test_targets, test_loss)
         lr_scheduler.step()
 
-        train_preds = torch.argmax(train_outputs, dim=1)
-        val_preds = torch.argmax(val_outputs, dim=1)
-        test_preds = torch.argmax(test_outputs, dim=1)
-
-        train_acc = (train_preds == train_targets).sum().item() / len(train_targets)
-        val_acc = (val_preds == val_targets).sum().item() / len(val_targets)
-        test_acc = (test_preds == test_targets).sum().item() / len(test_targets)
-
-        train_auc = roc_auc_score(train_targets, train_outputs[:, 1])
-        val_auc = roc_auc_score(val_targets, val_outputs[:, 1])
-        test_auc = roc_auc_score(test_targets, test_outputs[:, 1])
-
-        precision, recall, _ = precision_recall_curve(train_targets, train_outputs[:, 1])
-        train_auprc = auc(recall, precision)
-        precision, recall, _ = precision_recall_curve(val_targets, val_outputs[:, 1])
-        val_auprc = auc(recall, precision)
-        precision, recall, _ = precision_recall_curve(test_targets, test_outputs[:, 1])
-        test_auprc = auc(recall, precision)
-
-
         print(f'Epoch {iter}: train acc: {train_acc}')
-        print(f'Epoch {iter}: val acc: {val_acc}')
-        print(f'Epoch {iter}: test acc: {test_acc}')
         print(f'Epoch {iter}: train auc: {train_auc}')
-        print(f'Epoch {iter}: val auc: {val_auc}')
-        print(f'Epoch {iter}: test auc: {test_auc}')
         print(f'Epoch {iter}: train auprc: {train_auprc}')
+        print(f'Epoch {iter}: val acc: {val_acc}')
+        print(f'Epoch {iter}: val auc: {val_auc}')
         print(f'Epoch {iter}: val auprc: {val_auprc}')
+        print(f'Epoch {iter}: test acc: {test_acc}')
+        print(f'Epoch {iter}: test auc: {test_auc}')
         print(f'Epoch {iter}: test auprc: {test_auprc}')
 
         writer.add_scalars("acc", {"train_acc": train_acc, "val_acc": val_acc, "test_acc": test_acc}, iter)
