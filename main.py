@@ -6,7 +6,6 @@ from torchvision import models
 import json
 import random
 import timm
-from sklearn.metrics import roc_auc_score, precision_recall_curve, auc
 from torch.utils.tensorboard import SummaryWriter
 from train import *
 from dataset import *
@@ -127,13 +126,13 @@ def main(args, model):
         lr_scheduler.step()
 
         print(f'Epoch {iter}: train acc: {train_acc}')
-        print(f'Epoch {iter}: train auc: {train_auc}')
-        print(f'Epoch {iter}: train auprc: {train_auprc}')
         print(f'Epoch {iter}: val acc: {val_acc}')
-        print(f'Epoch {iter}: val auc: {val_auc}')
-        print(f'Epoch {iter}: val auprc: {val_auprc}')
         print(f'Epoch {iter}: test acc: {test_acc}')
+        print(f'Epoch {iter}: train auc: {train_auc}')
+        print(f'Epoch {iter}: val auc: {val_auc}')
         print(f'Epoch {iter}: test auc: {test_auc}')
+        print(f'Epoch {iter}: train auprc: {train_auprc}')
+        print(f'Epoch {iter}: val auprc: {val_auprc}')
         print(f'Epoch {iter}: test auprc: {test_auprc}')
 
         writer.add_scalars("acc", {"train_acc": train_acc, "val_acc": val_acc, "test_acc": test_acc}, iter)
@@ -146,6 +145,7 @@ def main(args, model):
         if test_auc > best_test_auc:
             best_epoch_metrics = [round(i, 4) for i in [train_acc, val_acc, test_acc, train_auc, val_auc, test_auc, train_auprc, val_auprc, test_auprc]]
             best_test_auc = test_auc
+            test_preds = torch.argmax(test_outputs, dim=1)
             plot_matrix(test_targets, test_preds, [0, 1],
                         args["log_dir"] + "/" + args["model_name"] + "/confusion_matrix.jpg",
                         ['fractured', 'non-fractured'])

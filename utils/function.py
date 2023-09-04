@@ -1,7 +1,8 @@
 import torch
 import pandas as pd
 import os
-
+from sklearn import metrics
+from sklearn.metrics import roc_auc_score, precision_recall_curve
 
 def xavier(m):
     if type(m) == torch.nn.Linear:
@@ -30,7 +31,7 @@ def calculate_metrics(outputs, targets, loss):
     acc = (preds == targets).sum().item() / len(targets)
     auc = roc_auc_score(targets, outputs[:, 1])
     precision, recall, _ = precision_recall_curve(targets, outputs[:, 1])
-    auprc = auc(recall, precision)
+    auprc = metrics.auc(recall, precision)
     return acc, auc, auprc
 
 def log_metrics(best_epoch_metrics, args):
