@@ -41,7 +41,7 @@ def main(args, model):
                             pin_memory=True, drop_last=True)
 
     else:
-        train_dataset = NoValDataset("../data_3subimg", train_transform)
+        train_dataset = NoValDataset("../data_3subimg/TrainSet", train_transform)
 
     if args["sampler"] == "WeightedRandomSampler":
         class_weight = (2015+378) / torch.tensor([378, 2015])
@@ -59,7 +59,7 @@ def main(args, model):
                              pin_memory=True, drop_last=False)
 
     print("num of train images:", len(train_loader.dataset))
-    print("num of val images:", len(val_loader.dataset))
+    # print("num of val images:", len(val_loader.dataset))
     print("num of test images:", len(test_loader.dataset))
 
     head = model.get_head()
@@ -120,6 +120,7 @@ def main(args, model):
             val_acc, val_auc, val_auprc = calculate_metrics(val_outputs, val_targets, val_loss)
         else:
             val_loss = 0.0
+            val_targets = [0]
             val_acc, val_auc, val_auprc = 0.0, 0.0, 0.0
         test_outputs, test_targets, test_loss = test(test_loader, model, loss_func, args)
         test_acc, test_auc, test_auprc = calculate_metrics(test_outputs, test_targets, test_loss)
