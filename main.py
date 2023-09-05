@@ -34,17 +34,22 @@ def main(args, model):
     # train_transform, val_transform, test_transform = tv_transform(args)
     train_transform, val_transform, test_transform = at_transform(args)
     
-    if args["validation"] == 1:
-        train_dataset = TrainValDataset(args["train_csv_path"], train_transform)
-        val_loader = DataLoader(TrainValDataset(args["val_csv_path"], val_transform),
-                            batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
-                            pin_memory=True, drop_last=True)
-
-    else:
-        train_dataset = NoValDataset("../data_3subimg/TrainSet", train_transform)
+    if args["mode"] == "duanlie":
+        if args["validation"] == 1:
+            train_dataset = TrainValDataset(args["train_csv_path"], train_transform)
+            val_loader = DataLoader(TrainValDataset(args["val_csv_path"], val_transform),
+                                batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
+                                pin_memory=True, drop_last=True)
+        else:
+            train_dataset = NoValDataset("../data_3subimg/TrainSet", train_transform)
+        test_dataset = TestDataset(args["test_path"], test_transform)
+    elif args["mode"] == "side":
+        train_dataset = SideDataset("../data_3subimg/TrainSet/断裂", train_transform)
+        test_dataset = SideTestDataset(args["test_path"], test_transform)
 
     if args["sampler"] == "WeightedRandomSampler":
-        class_weight = (2015+378) / torch.tensor([378, 2015])
+        # class_weight = (2015+378) / torch.tensor([378, 2015]).to(args["device"])
+        class_weight = (129+86+162) / torch.tensor([129, 86, 162]).to(args["device"])
         sample_weight = torch.tensor([class_weight[i] for i in train_dataset.labels])
         mysampler = sampler.WeightedRandomSampler(sample_weight, len(sample_weight))
     else:
@@ -52,11 +57,10 @@ def main(args, model):
 
     train_loader = DataLoader(train_dataset, sampler=mysampler, batch_size=args["batch_size"], 
                             shuffle=False if args["sampler"] else True, num_workers=args["num_workers"],
-                            pin_memory=True, drop_last=True)
+                            pin_memory=True, drop_last=False)
 
-    test_loader = DataLoader(TestDataset(args["test_path"], test_transform),
-                             batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
-                             pin_memory=True, drop_last=False)
+    test_loader = DataLoader(test_dataset, batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
+                            pin_memory=True, drop_last=False)
 
     print("num of train images:", len(train_loader.dataset))
     # print("num of val images:", len(val_loader.dataset))
@@ -81,7 +85,8 @@ def main(args, model):
     elif args["optim"] == "SGD":
         optimizer = torch.optim.SGD(groups_params, momentum=0.9, weight_decay=args["weight_decay"])
 
-    class_weight = (2015+378) / torch.tensor([378, 2015]).to(args["device"])
+    # class_weight = (2015+378) / torch.tensor([378, 2015]).to(args["device"])
+    class_weight = (129+86+162) / torch.tensor([129, 86, 162]).to(args["device"])
     if args["loss_func"] == "CEloss":
         loss_func = torch.nn.CrossEntropyLoss(weight=class_weight if args["use_weighted_loss"] == 1 
                                             else None).to(args["device"])
@@ -100,7 +105,8 @@ def main(args, model):
     elif args["lr_scheduler"] == "StepLR":
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args["step_size"], gamma=args["gamma"])
 
-    best_test_auc = 0
+    best_test_auc = 0.0
+    best_test_acc = 0.0
     best_epoch_metrics = []
     init_epoch = 1
 
@@ -115,7 +121,7 @@ def main(args, model):
     for iter in range(init_epoch, args["epochs"] + 1):
         train_outputs, train_targets, train_loss = train(train_loader, model, loss_func, optimizer, args)
         train_acc, train_auc, train_auprc = calculate_metrics(train_outputs, train_targets, train_loss)
-        if args["validation"] == 1:
+        if args["mode"] == "duanlie" and args["validation"] == 1:
             val_outputs, val_targets, val_loss = val(val_loader, model, loss_func, args)
             val_acc, val_auc, val_auprc = calculate_metrics(val_outputs, val_targets, val_loss)
         else:
@@ -143,13 +149,13 @@ def main(args, model):
                            {"train_loss": train_loss / len(train_targets), "val_loss": val_loss / len(val_targets),
                             "test_loss": test_loss / len(test_targets)}, iter)
 
-        if test_auc > best_test_auc:
+        if test_auc > best_test_auc or (test_auc == best_test_auc and test_acc > best_test_acc):
             best_epoch_metrics = [round(i, 4) for i in [train_acc, val_acc, test_acc, train_auc, val_auc, test_auc, train_auprc, val_auprc, test_auprc]]
-            best_test_auc = test_auc
+            best_test_auc, best_test_acc = test_auc, test_acc
             test_preds = torch.argmax(test_outputs, dim=1)
-            plot_matrix(test_targets, test_preds, [0, 1],
+            plot_matrix(test_targets, test_preds, [0, 1] if args["mode"]=="duanlie" else [0, 1, 2],
                         args["log_dir"] + "/" + args["model_name"] + "/confusion_matrix.jpg",
-                        ['fractured', 'non-fractured'])
+                        ['fractured', 'non-fractured'] if args["mode"]=="duanlie" else ["left", "right", "both"])
             torch.save(model.state_dict(), args["saved_path"] + "/" + args["model_name"] + ".pth")
 
         if iter % 10 == 0:

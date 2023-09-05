@@ -29,9 +29,12 @@ def save_ckpt(args, model, optimizer, lr_scheduler, epoch, best_metric):
 def calculate_metrics(outputs, targets, loss):
     preds = torch.argmax(outputs, dim=1)
     acc = (preds == targets).sum().item() / len(targets)
-    auc = roc_auc_score(targets, outputs[:, 1])
-    precision, recall, _ = precision_recall_curve(targets, outputs[:, 1])
-    auprc = metrics.auc(recall, precision)
+    if outputs.shape[1] == 2:
+        auc = roc_auc_score(targets, outputs[:, 1])
+        precision, recall, _ = precision_recall_curve(targets, outputs[:, 1])
+        auprc = metrics.auc(recall, precision)
+    else:
+        auc, auprc = 0.0, 0.0
     return acc, auc, auprc
 
 def log_metrics(best_epoch_metrics, args):
