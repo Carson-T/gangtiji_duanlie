@@ -35,6 +35,7 @@ def main(args, model):
     train_transform, val_transform, test_transform = at_transform(args)
     
     if args["mode"] == "duanlie":
+        class_weight = (2015+378) / torch.tensor([378, 2015]).to(args["device"])
         if args["validation"] == 1:
             train_dataset = TrainValDataset(args["train_csv_path"], train_transform)
             val_loader = DataLoader(TrainValDataset(args["val_csv_path"], val_transform),
@@ -44,12 +45,11 @@ def main(args, model):
             train_dataset = NoValDataset("../data_3subimg/TrainSet", train_transform)
         test_dataset = TestDataset(args["test_path"], test_transform)
     elif args["mode"] == "side":
+        class_weight = (129+86+162) / torch.tensor([129, 86, 162]).to(args["device"])
         train_dataset = SideDataset("../data_3subimg/TrainSet/断裂", train_transform)
         test_dataset = SideTestDataset(args["test_path"], test_transform)
 
     if args["sampler"] == "WeightedRandomSampler":
-        # class_weight = (2015+378) / torch.tensor([378, 2015]).to(args["device"])
-        class_weight = (129+86+162) / torch.tensor([129, 86, 162]).to(args["device"])
         sample_weight = torch.tensor([class_weight[i] for i in train_dataset.labels])
         mysampler = sampler.WeightedRandomSampler(sample_weight, len(sample_weight))
     else:
@@ -85,8 +85,6 @@ def main(args, model):
     elif args["optim"] == "SGD":
         optimizer = torch.optim.SGD(groups_params, momentum=0.9, weight_decay=args["weight_decay"])
 
-    # class_weight = (2015+378) / torch.tensor([378, 2015]).to(args["device"])
-    class_weight = (129+86+162) / torch.tensor([129, 86, 162]).to(args["device"])
     if args["loss_func"] == "CEloss":
         loss_func = torch.nn.CrossEntropyLoss(weight=class_weight if args["use_weighted_loss"] == 1 
                                             else None).to(args["device"])

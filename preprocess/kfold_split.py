@@ -6,6 +6,10 @@ from sklearn.model_selection import StratifiedKFold
 root_path = "../../data_3subimg/TrainSet"
 duanlie_path = "../../data_3subimg/TrainSet/断裂"
 feiduanlie_path = "../../data_3subimg/TrainSet/非断裂"
+
+if not os.path.isdir(os.path.join(root_path, "csv")):
+    os.makedirs(os.path.join(root_path, "csv"))
+
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=2023)
 
 img_paths = []
