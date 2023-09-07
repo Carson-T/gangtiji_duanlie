@@ -45,7 +45,7 @@ def main(args, model):
             train_dataset = NoValDataset("../data_3subimg/TrainSet", train_transform)
         test_dataset = TestDataset(args["test_path"], test_transform)
     elif args["mode"] == "side":
-        class_weight = (129+86+162) / torch.tensor([129, 86, 162]).to(args["device"])
+        class_weight = (157+87+127) / torch.tensor([157, 87, 127]).to(args["device"])
         train_dataset = SideDataset("../data_3subimg/TrainSet/断裂", train_transform)
         test_dataset = SideTestDataset(args["test_path"], test_transform)
 
