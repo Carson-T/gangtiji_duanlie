@@ -35,19 +35,27 @@ def main(args, model):
     train_transform, val_transform, test_transform = at_transform(args)
     
     if args["mode"] == "duanlie":
-        class_weight = (2015+378) / torch.tensor([378, 2015]).to(args["device"])
+        class_weight = (2015+378) / torch.tensor([2015, 378]).to(args["device"])
         if args["validation"] == 1:
             train_dataset = TrainValDataset(args["train_csv_path"], train_transform)
             val_loader = DataLoader(TrainValDataset(args["val_csv_path"], val_transform),
                                 batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
-                                pin_memory=True, drop_last=True)
+                                pin_memory=True, drop_last=False)
         else:
             train_dataset = NoValDataset("../data_3subimg/TrainSet", train_transform)
         test_dataset = TestDataset(args["test_path"], test_transform)
     elif args["mode"] == "side":
         class_weight = (157+87+127) / torch.tensor([157, 87, 127]).to(args["device"])
-        train_dataset = SideDataset("../data_3subimg/TrainSet/断裂", train_transform)
+        if args["validation"] == 1:
+            # class_weight = (1560+860+1240) / torch.tensor([1560, 860, 1240]).to(args["device"])
+            train_dataset = SideTrainValDataset(args["train_csv_path"], train_transform)
+            val_loader = DataLoader(SideTrainValDataset(args["val_csv_path"], val_transform),
+                                batch_size=args["batch_size"], shuffle=False, num_workers=args["num_workers"],
+                                pin_memory=True, drop_last=False)
+        else:
+            train_dataset = SideNoValDataset("../data_3subimg/TrainSet/断裂", train_transform)
         test_dataset = SideTestDataset(args["test_path"], test_transform)
+
 
     if args["sampler"] == "WeightedRandomSampler":
         sample_weight = torch.tensor([class_weight[i] for i in train_dataset.labels])
@@ -79,6 +87,9 @@ def main(args, model):
         model.apply(xavier)
     elif args["init"] == "kaiming":
         model.apply(kaiming)
+
+    if args["pretrained_path"]:
+        model.load_state_dict(torch.load(args["pretrained_path"]), strict=True)
 
     if args["optim"] == "AdamW":
         optimizer = torch.optim.AdamW(groups_params, weight_decay=args["weight_decay"])
@@ -119,7 +130,7 @@ def main(args, model):
     for iter in range(init_epoch, args["epochs"] + 1):
         train_outputs, train_targets, train_loss = train(train_loader, model, loss_func, optimizer, args)
         train_acc, train_auc, train_auprc = calculate_metrics(train_outputs, train_targets, train_loss)
-        if args["mode"] == "duanlie" and args["validation"] == 1:
+        if args["validation"] == 1:
             val_outputs, val_targets, val_loss = val(val_loader, model, loss_func, args)
             val_acc, val_auc, val_auprc = calculate_metrics(val_outputs, val_targets, val_loss)
         else:
@@ -153,7 +164,7 @@ def main(args, model):
             test_preds = torch.argmax(test_outputs, dim=1)
             plot_matrix(test_targets, test_preds, [0, 1] if args["mode"]=="duanlie" else [0, 1, 2],
                         args["log_dir"] + "/" + args["model_name"] + "/confusion_matrix.jpg",
-                        ['fractured', 'non-fractured'] if args["mode"]=="duanlie" else ["left", "right", "both"])
+                        ['non-fractured', 'fractured'] if args["mode"]=="duanlie" else ["left", "right", "both"])
             torch.save(model.state_dict(), args["saved_path"] + "/" + args["model_name"] + ".pth")
 
         if iter % 10 == 0:
@@ -164,27 +175,27 @@ def main(args, model):
 
 if __name__ == '__main__':
     args = vars(args_parser())
+    if args["parameters_path"]:
+        with open(args["parameters_path"]) as f:
+            args = json.load(f)
+
+    print(args)
     set_seed(2023)
 
-    if args["pretrained_path"]:
-        pretrained_model = models.convnext_base()
-        pretrained_model.load_state_dict(torch.load(args["pretrained_path"]), strict=True)
-        # model = Convnext_base_tv(pretrained_model, args["num_classes"])
+    if args["drop_path_rate"] > 0:
+        pretrained_model = timm.create_model(args["backbone"], drop_rate=args["drop_rate"],
+                                                drop_path_rate=args["drop_path_rate"], pretrained=True)
     else:
-        if args["drop_path_rate"] > 0:
-            pretrained_model = timm.create_model(args["backbone"], drop_rate=args["drop_rate"],
-                                                 drop_path_rate=args["drop_path_rate"], pretrained=True)
-        else:
-            pretrained_model = timm.create_model(args["backbone"], drop_rate=args["drop_rate"], pretrained=True)
+        pretrained_model = timm.create_model(args["backbone"], drop_rate=args["drop_rate"], pretrained=True)
 
-        if "resnet" in args["backbone"]:
-            model = Resnet(pretrained_model, args["num_classes"])
+    if "resnet" in args["backbone"]:
+        model = Resnet(pretrained_model, args["num_classes"])
 
-        elif "efficientnet" in args["backbone"]:
-            model = Efficientnet(pretrained_model, args["num_classes"])
+    elif "efficientnet" in args["backbone"]:
+        model = Efficientnet(pretrained_model, args["num_classes"])
 
-        elif "convnext" in args["backbone"]:
-            model = Convnext(pretrained_model, args["num_classes"])
+    elif "convnext" in args["backbone"]:
+        model = Convnext(pretrained_model, args["num_classes"])
 
     main(args, model)
 

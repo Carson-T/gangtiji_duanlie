@@ -15,7 +15,7 @@ import collections
 from tqdm import tqdm
 import copy
 # from dataset import *
-# from model import *
+from model import *
 
 
 class TestDataset(Dataset):
@@ -178,7 +178,9 @@ def load_model(model, model_path, device):
 def vote(targets, all_preds):
     voted_preds = []
     for i in range(len(targets)):
-        count_dict = collections.Counter(all_preds[:][i])
+        count_dict = collections.Counter([all_preds[j][i] for j in range(len(model_paths))])
+        if i == 1:
+            print(count_dict)
         voted_preds.append(count_dict.most_common(1)[0][0])
     voted_preds = torch.tensor(voted_preds)
     return voted_preds
@@ -188,12 +190,17 @@ if __name__ == '__main__':
     device = "cuda" if torch.cuda.is_available() else "cpu"
     mode = "duanlie"   # side or duanlie
     testpath = "../data_3subimg/TestSet"
-    model_paths = [     # duanlie
-        "convnextv2_n-3subimg-novalid-v7.pth"
-    ]
-    # model_paths = [   # side
-    #     "convnextv2_n-3subimg-side-v2.pth"
+    # model_paths = [     # duanlie
+    #     "../saved_model/convnext/convnextv2_n-3subimg-fold1-v5.pth",
+    #     "../saved_model/convnext/convnextv2_n-3subimg-fold2-v5.pth",
+    #     "../saved_model/convnext/convnextv2_n-3subimg-fold3-v5.pth",
+    #     "../saved_model/convnext/convnextv2_n-3subimg-fold4-v5.pth",
+    #     "../saved_model/convnext/convnextv2_n-3subimg-fold5-v5.pth",
     # ]
+    model_paths = [   
+        "../saved_model/efficientnet/efficientnetv2_s-3subimg-novalid-v5.pth",
+        
+    ]
 
     test_transform = albumentations.Compose([
         albumentations.Resize(224, 224),
@@ -204,13 +211,13 @@ if __name__ == '__main__':
     if mode == "duanlie":
         test_loader = DataLoader(TestDataset(testpath, test_transform), batch_size=32, shuffle=False,
                                  num_workers=8, pin_memory=True, drop_last=False)
-        model1 = Convnext(timm.create_model("convnextv2_nano.fcmae_ft_in1k"), 2).to(device)
+        # model1 = Convnext(timm.create_model("convnextv2_nano.fcmae_ft_in1k"), 2).to(device)
+        model1 = Efficientnet(timm.create_model("efficientnetv2_rw_s.ra2_in1k"), 2).to(device)
     elif mode == "side":
         test_loader = DataLoader(SideTestDataset(testpath, test_transform), batch_size=32,
                                  shuffle=False,
                                  num_workers=8, pin_memory=True, drop_last=False)
         model1 = Convnext(timm.create_model("convnextv2_nano.fcmae_ft_in1k"), 3).to(device)
-    # model1 = Efficientnet(timm.create_model("efficientnetv2_rw_s.ra2_in1k"), 2).to(device)
     models = [model1] * 5
 
     all_outputs = []
@@ -226,7 +233,7 @@ if __name__ == '__main__':
             auc = roc_auc_score(targets, outputs[:, 1])
             all_auc.append(auc)
             all_outputs.append(outputs)
-        all_preds.append(preds)
+        all_preds.append(preds.numpy().tolist())
         all_acc.append(acc)
 
     if mode == "duanlie":
@@ -234,7 +241,9 @@ if __name__ == '__main__':
             average_outputs = sum(all_outputs) / len(all_outputs)
             average_auc = roc_auc_score(targets, average_outputs[:, 1])
             # vote
+            print(len(targets),len(all_preds),len(all_preds[0]))
             voted_preds = vote(targets, all_preds)
+            voted_preds = torch.argmax(average_outputs, dim=1)
             average_acc = (voted_preds == targets).sum().item() / len(targets)
         else:
             average_outputs = all_outputs[0]

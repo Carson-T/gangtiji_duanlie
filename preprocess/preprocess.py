@@ -59,19 +59,26 @@ def reorder(datapath, des_root, sup_datapath):
             index += 1
 
 
-datapath = "../../original_data"
-train_path = datapath+"/TrainSet"
-test_path = datapath+"/TestSet"
-des_train_path = "../../data/TrainSet"
-des_test_path = "../../data/TestSet"
-sup_datapath = "../../肛提肌断裂-补充训练集"
+# datapath = "../../original_data"
+# train_path = datapath+"/TrainSet"
+# test_path = datapath+"/TestSet"
+# des_train_path = "../../data/TrainSet"
+# des_test_path = "../../data/TestSet"
+# sup_datapath = "../../肛提肌断裂-补充训练集"
 
-# rename(datapath)
-if not os.path.isdir(des_train_path):
-    os.makedirs(des_train_path)
-if not os.path.isdir(des_test_path):
-    os.makedirs(des_test_path)
+# # rename(datapath)
+# if not os.path.isdir(des_train_path):
+#     os.makedirs(des_train_path)
+# if not os.path.isdir(des_test_path):
+#     os.makedirs(des_test_path)
 
-reorder(train_path, des_train_path, sup_datapath)
-for group in ["1.佛山市医", "2.湖南省妇幼", "3.广医三院", "4.白银", "5.陕西省人民医院"]:
-    reorder(os.path.join(test_path, group), os.path.join(des_test_path, group), "")
+# reorder(train_path, des_train_path, sup_datapath)
+# for group in ["1.佛山市医", "2.湖南省妇幼", "3.广医三院", "4.白银", "5.陕西省人民医院"]:
+#     reorder(os.path.join(test_path, group), os.path.join(des_test_path, group), "")
+
+
+combination = "../../Combinations"
+for root, dirs, files in os.walk(combination):
+    for file in files:
+        new_filename = file[:-6]+"-sub"+str(int(file[-5])+1)+file[-4:]
+        os.rename(os.path.join(root, file), os.path.join(root, new_filename))
