@@ -5,7 +5,7 @@ from sklearn import metrics
 
 # 相关库
 
-def plot_matrix(y_true, y_pred, labels_name, savepath, axis_labels=None):
+def plot_matrix(y_true, y_pred, labels_name, axis_labels=None):
 # 利用sklearn中的函数生成混淆矩阵并归一化
     matplotlib.use('agg')
     cm = metrics.confusion_matrix(y_true, y_pred, labels=labels_name, sample_weight=None)  # 生成混淆矩阵
@@ -34,4 +34,5 @@ def plot_matrix(y_true, y_pred, labels_name, savepath, axis_labels=None):
                         color="black")  # 如果要更改颜色风格，需要同时更改此行
 # 显示
 #     plt.show()
-    fig.savefig(savepath)
+    # fig.savefig(savepath)
+    return fig

@@ -14,7 +14,7 @@ def kaiming(m):
         torch.nn.init.kaiming_uniform_(m.weight)
 
 
-def save_ckpt(args, model, optimizer, lr_scheduler, epoch, best_metric):
+def save_ckpt(ckpt_save_path,  model, optimizer, lr_scheduler, epoch, best_metric):
     state = dict(
         model_state=model.state_dict(),
         optimizer=optimizer.state_dict(),
@@ -23,7 +23,7 @@ def save_ckpt(args, model, optimizer, lr_scheduler, epoch, best_metric):
         best_test_auc=best_metric,
     )
 
-    torch.save(state, os.path.join(args["ckpt_path"], args["model_name"] + ".pth.tar"))
+    torch.save(state, ckpt_save_path)
 
 
 def calculate_metrics(outputs, targets, loss):
@@ -37,9 +37,9 @@ def calculate_metrics(outputs, targets, loss):
         auc, auprc = 0.0, 0.0
     return acc, auc, auprc
 
-def log_metrics(best_epoch_metrics, args):
+def log_metrics(best_epoch_metrics, args, version_name):
     data = pd.read_csv(args["metrics_log_path"])
-    new_data = pd.DataFrame({"model_name": args["model_name"],
+    new_data = pd.DataFrame({"model_name": version_name,
                              "train_acc": best_epoch_metrics[0],
                              "valid_acc": best_epoch_metrics[1],
                              "test_acc": best_epoch_metrics[2],
