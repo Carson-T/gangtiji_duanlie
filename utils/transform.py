@@ -52,18 +52,21 @@ def at_transform(args):
         albumentations.CoarseDropout(max_holes=1, max_height=int(args["resize_h"] * 0.3),
                                      max_width=int(args["resize_w"] * 0.3), min_height=1, min_width=1, p=0.8 if args["Cutout"] == 1 else 0),
         albumentations.Normalize(),
+        albumentations.ToGray(p=1 if args["is_concat"] else 0),
         AT.ToTensorV2()
     ])
 
     val_transforms = albumentations.Compose([
         albumentations.Resize(args["resize_h"], args["resize_w"]),
         albumentations.Normalize(),
+        albumentations.ToGray(p=1 if args["is_concat"] else 0),
         AT.ToTensorV2()
     ])
 
     test_transforms = albumentations.Compose([
         albumentations.Resize(args["resize_h"], args["resize_w"]),
         albumentations.Normalize(),
+        albumentations.ToGray(p=1 if args["is_concat"] else 0),
         AT.ToTensorV2()
     ])
 

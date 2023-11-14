@@ -10,10 +10,11 @@ import json
 import random
 import collections
 import timm
+from safetensors.torch import load_file
 from train import *
 from dataset import *
 from argparser import args_parser
-from model import *
+from models import *
 from utils.loss import *
 from utils.plot import plot_matrix
 from utils.transform import *
@@ -38,8 +39,8 @@ def main(args):
     train_transform, val_transform, test_transform = at_transform(args)
 
     if args["mode"] == "duanlie":
-        train_val_dataset = Two_Dataset(args["data_path"], train_transform, is_test=False)
-        test_loader = DataLoader(Two_Dataset(args["data_path"], test_transform, is_test=True),
+        train_val_dataset = Two_Dataset(args["data_path"], train_transform, is_test=False, is_concat=args["is_concat"])
+        test_loader = DataLoader(Two_Dataset(args["data_path"], test_transform, is_test=True, is_concat=args["is_concat"]),
                                  batch_size=args["batch_size"], shuffle=False,
                                  num_workers=args["num_workers"],
                                  pin_memory=True, drop_last=False)
@@ -48,15 +49,23 @@ def main(args):
 
 
     elif args["mode"] == "side":
-        class_weight = (157 + 87 + 127) / torch.tensor([157, 87, 127]).to(args["device"])
-        train_val_dataset = Three_Dataset(args["data_path"], train_transform, is_test=False)
-        test_loader = DataLoader(Three_Dataset(args["data_path"], test_transform, is_test=True),
+        train_val_dataset = Three_Dataset(args["data_path"], train_transform, is_test=False, is_concat=args["is_concat"])
+        test_loader = DataLoader(Three_Dataset(args["data_path"], test_transform, is_test=True, is_concat=args["is_concat"]),
                                  batch_size=args["batch_size"], shuffle=False,
                                  num_workers=args["num_workers"],
                                  pin_memory=True, drop_last=False)
         counts = collections.Counter(train_val_dataset.labels)
         class_weight = (counts[0] + counts[1] + counts[2]) / torch.tensor([counts[0], counts[1], counts[2]]).to(
             args["device"])
+    elif args["mode"] == "four":
+        train_val_dataset = Four_Dataset(args["data_path"], train_transform, is_test=False, is_concat=args["is_concat"])
+        test_loader = DataLoader(Four_Dataset(args["data_path"], test_transform, is_test=True, is_concat=args["is_concat"]),
+                                 batch_size=args["batch_size"], shuffle=False,
+                                 num_workers=args["num_workers"],
+                                 pin_memory=True, drop_last=False)
+        counts = collections.Counter(train_val_dataset.labels)
+        class_weight = ((counts[0] + counts[1] + counts[2] + counts[3]) /
+                        torch.tensor([counts[0], counts[1], counts[2], counts[3]]).to(args["device"]))
 
     print(counts)
     if args["validation"] == 1:
@@ -91,36 +100,42 @@ def main(args):
             # set the wandb project where this run will be logged
             project="gangtiji-duanlie",
             name=version_name,
-            id=version_name,
+            # id=version_name,
             dir=args["log_dir"],
             resume=True if args["resume"] else False,
             # track hyperparameters and run metadata
             config=args
         )
-        if args["model_source"] == "timm":
-            if args["drop_path_rate"] > 0:
-                pretrained_model = timm.create_model(args["backbone"], drop_rate=args["drop_rate"],
-                                                     drop_path_rate=args["drop_path_rate"], pretrained=True)
-            else:
-                pretrained_model = timm.create_model(args["backbone"], drop_rate=args["drop_rate"], pretrained=True)
-            if "resnet" in args["backbone"]:
-                model = Resnet(pretrained_model, args["num_classes"])
-            elif "efficientnet" in args["backbone"]:
-                model = Efficientnet(pretrained_model, args["num_classes"])
-            elif "convnext" in args["backbone"]:
-                model = Convnext(pretrained_model, args["num_classes"])
 
-        else:
-            pretrained_model = models.get_model(name=args["backbone"], weights="DEFAULT", dropout=args["drop_rate"])
-            if "efficientnet" in args["backbone"]:
-                model = Efficientnet_tv(pretrained_model, args["num_classes"])
+        if "resnet" in args["backbone"]:
+            model_name = "MyResnet"
+        elif "efficientnet" in args["backbone"]:
+            model_name = "MyEfficientnet"
+        elif "convnext" in args["backbone"]:
+            model_name = "MyConvnext"
+        elif "vit" in args["backbone"]:
+            model_name = "MyVit"
+
+        if args["is_concat"]:
+            model_name = "MyEfficientnet_gray"
+
+        model = timm.create_model(model_name=model_name,
+                                  backbone=args["backbone"],
+                                  pretrained_path=args["pretrained_path"],
+                                  num_classes=args["num_classes"],
+                                  drop_rate=args["drop_rate"],
+                                  drop_path_rate=args["drop_path_rate"],
+                                  is_pretrained=False
+                                  )
 
         head = model.get_head()
         base_params = filter(lambda p: id(p) not in list(map(id, head.parameters())),
                              model.parameters())
         groups_params = [{"params": base_params, "lr": args["lr"][0]},
                          {"params": head.parameters(), "lr": args["lr"][1]}]
-        print("model init finish")
+
+        print("models init finish")
+
         if args["is_parallel"] == 1:
             model = nn.DataParallel(model, device_ids=args["device_ids"])
         model.to(args["device"])
@@ -128,9 +143,6 @@ def main(args):
             model.apply(xavier)
         elif args["init"] == "kaiming":
             model.apply(kaiming)
-
-        if args["pretrained_path"]:
-            model.load_state_dict(torch.load(args["pretrained_path"]), strict=True)
 
         if args["optim"] == "AdamW":
             optimizer = torch.optim.AdamW(groups_params, weight_decay=args["weight_decay"])
@@ -207,15 +219,19 @@ def main(args):
                                 "test_loss": test_loss / len(test_targets)}
                        }, step=iter)
 
-            if test_auc > best_test_auc or (test_auc == best_test_auc and test_acc > best_test_acc):
+            if (test_auc > 0 and test_auc >= best_test_auc) or (test_auc == best_test_auc and test_acc >= best_test_acc):
                 best_epoch_metrics = [round(i, 4) for i in
                                       [train_acc, val_acc, test_acc, train_auc, val_auc, test_auc, train_auprc,
                                        val_auprc, test_auprc]]
                 best_test_auc, best_test_acc = test_auc, test_acc
                 test_preds = torch.argmax(test_outputs, dim=1)
-                fig = plot_matrix(test_targets, test_preds, [0, 1] if args["mode"] == "duanlie" else [0, 1, 2],
-                                  # args["log_dir"] + "/" + version_name + "/confusion_matrix.jpg",
-                            ['non-fractured', 'fractured'] if args["mode"] == "duanlie" else ["left", "right", "both"])
+                if args["mode"] == "duanlie":
+                    fig = plot_matrix(test_targets, test_preds, [0, 1], ['non-fractured', 'fractured'])
+                elif args["mode"] == "side":
+                    fig = plot_matrix(test_targets, test_preds, [0, 1, 2], ["left", "right", "both"])
+                elif args["mode"] == "four":
+                    fig = plot_matrix(test_targets, test_preds, [0, 1, 2, 3],
+                                      ['non-fractured', "left", "right", "both"])
                 wandb.log({"confusion_matrix": fig}, step=iter)
                 torch.save(model.state_dict(), args["saved_path"] + "/" + version_name + ".pth")
 
@@ -224,6 +240,9 @@ def main(args):
                           iter, best_test_auc)
 
         log_metrics(best_epoch_metrics, args, version_name)
+        wandb.run.summary["best_test_acc"] = best_epoch_metrics[2]
+        wandb.run.summary["best_test_auc"] = best_epoch_metrics[5]
+        wandb.run.summary["best_test_auprc"] = best_epoch_metrics[8]
         # with open(args["log_dir"] + "/" + version_name + "/parameters.json", "w+") as f:
         #     json.dump(args, f)
         wandb.finish()
