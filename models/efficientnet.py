@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torchvision
 import timm
 from timm.models import register_model
 from safetensors.torch import load_file
@@ -31,6 +32,34 @@ class Efficientnet(nn.Module):
     def get_head(self):
         return self.classifier
 
+class Efficientnet_tv(nn.Module):
+    def __init__(self, backbone, num_classes):
+        super(Efficientnet_tv, self).__init__()
+        self.branch1 = backbone
+        self.branch2 = copy.deepcopy(backbone)
+        self.branch3 = copy.deepcopy(backbone)
+        self.branchs = nn.ModuleList([self.branch1, self.branch2, self.branch3])
+        self.classifier = nn.Sequential(
+            nn.Linear(backbone.classifier[1].in_features * 3, num_classes),
+        )
+
+    def forward(self, x):
+        for i in range(len(x)):
+            features = self.branchs[i].features(x[i])
+            features = self.branchs[i].avgpool(features)
+            features = torch.flatten(features, 1)
+            pre_logits = self.branchs[i].classifier[0](features)
+            # pre_logits = self.branchs[i].forward_head(features, pre_logits=True)
+            if i == 0:
+                output = pre_logits
+            else:
+                output = torch.hstack([output, pre_logits])
+        output = self.classifier(output)
+        return output
+
+    def get_head(self):
+        return self.classifier
+
 class Efficientnet_gray(nn.Module):
     def __init__(self, backbone, num_classes):
         super(Efficientnet_gray, self).__init__()
@@ -47,6 +76,13 @@ class Efficientnet_gray(nn.Module):
 
     def get_head(self):
         return self.classifier
+
+
+@register_model
+def MyEfficientnet_tv(num_classes, **kwargs) -> Efficientnet_tv:
+    pretrained_model = torchvision.models.efficientnet_v2_s(weights="DEFAULT")
+    model = Efficientnet_tv(pretrained_model, num_classes)
+    return model
 
 @register_model
 def MyEfficientnet(backbone, pretrained_path, num_classes, is_pretrained=False, **kwargs) -> Efficientnet:

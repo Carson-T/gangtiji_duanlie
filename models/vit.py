@@ -31,10 +31,35 @@ class Vit(nn.Module):
     def get_head(self):
         return self.classifier
 
+class Vit_gray(nn.Module):
+    def __init__(self, backbone, num_classes):
+        super(Vit_gray, self).__init__()
+        self.backbone = backbone
+        self.classifier = nn.Sequential(
+            nn.Linear(backbone.head.in_features, num_classes),
+        )
+
+    def forward(self, x):
+        features = self.backbone.forward_features(x)
+        pre_logits = self.backbone.forward_head(features, pre_logits=True)
+        output = self.classifier(pre_logits)
+        return output
+
+    def get_head(self):
+        return self.classifier
+
 @register_model
 def MyVit(backbone, pretrained_path, num_classes, is_pretrained=False, **kwargs) -> Vit:
     pretrained_model = timm.create_model(backbone, drop_rate=kwargs["drop_rate"], drop_path_rate=kwargs["drop_path_rate"], pretrained=is_pretrained)
     if pretrained_path:
         pretrained_model.load_state_dict(load_file(pretrained_path))
     model = Vit(pretrained_model, num_classes)
+    return model
+
+@register_model
+def MyVit_gray(backbone, pretrained_path, num_classes, is_pretrained=False, **kwargs) -> Vit_gray:
+    pretrained_model = timm.create_model(backbone, drop_rate=kwargs["drop_rate"], drop_path_rate=kwargs["drop_path_rate"], pretrained=is_pretrained)
+    if pretrained_path:
+        pretrained_model.load_state_dict(load_file(pretrained_path))
+    model = Vit_gray(pretrained_model, num_classes)
     return model

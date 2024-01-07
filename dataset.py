@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 
 
 class Two_Dataset(Dataset):
-    def __init__(self, data_path, transform, is_test, is_concat):
+    def __init__(self,data_path, transform, is_test, is_concat):
         super(Two_Dataset, self).__init__()
         self.data_path = data_path
         self.is_concat = is_concat

@@ -28,7 +28,7 @@ def set_seed(seed=2023):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    cudnn.benchmark = True
+    cudnn.benchmark = False
     cudnn.deterministic = True
     os.environ['PYTHONHASHSEED'] = str(seed)
 
@@ -107,19 +107,7 @@ def main(args):
             config=args
         )
 
-        if "resnet" in args["backbone"]:
-            model_name = "MyResnet"
-        elif "efficientnet" in args["backbone"]:
-            model_name = "MyEfficientnet"
-        elif "convnext" in args["backbone"]:
-            model_name = "MyConvnext"
-        elif "vit" in args["backbone"]:
-            model_name = "MyVit"
-
-        if args["is_concat"]:
-            model_name = "MyEfficientnet_gray"
-
-        model = timm.create_model(model_name=model_name,
+        model = timm.create_model(model_name=args["model_name"],
                                   backbone=args["backbone"],
                                   pretrained_path=args["pretrained_path"],
                                   num_classes=args["num_classes"],
